@@ -1487,17 +1487,25 @@ async def view_channel_thread(
 
 
 async def list_knowledge_bases(
-    count: int = 10,
+    count: int = 200,
     skip: int = 0,
     __request__: Request = None,
     __user__: dict = None,
 ) -> str:
     """
-    List the user's accessible knowledge bases.
+    List ALL knowledge bases the user can read, sorted by name.
 
-    :param count: Maximum number of KBs to return (default: 10)
+    Returns every accessible knowledge base. When the result is truncated the
+    response says so in 'truncated' and 'total' - a listing that silently omits
+    a knowledge base makes the assistant answer honestly and WRONGLY, because it
+    cannot look for what it was never shown.
+
+    :param count: Maximum number of KBs to return (default: 200 - effectively all)
     :param skip: Number of results to skip for pagination (default: 0)
-    :return: JSON with KBs containing id, name, description, and file_count
+    :return: JSON object with 'total', 'shown', 'truncated' and 'knowledge_bases'
+             (each with id, name, description, file_count), sorted by name.
+             If 'truncated' is true, raise 'count' before concluding that a
+             knowledge base does not exist.
     """
     if __request__ is None:
         return json.dumps({'error': 'Request context not available'})
@@ -1537,7 +1545,46 @@ async def list_knowledge_bases(
                 }
             )
 
-        return json.dumps(knowledge_bases, ensure_ascii=False)
+        # NIDUM (09/09/2026) - POR NOME, e com o total DECLARADO.
+        #
+        # O DEFEITO, medido: o agente pediu as bases, recebeu DEZ de doze, e
+        # 'Fonte' e 'Reunioes' - as duas maiores - nao estavam entre elas. Ele
+        # respondeu 'atas anteriores nao disponiveis', o que era HONESTO: para
+        # ele, Reunioes nao existia. Resposta honesta e ERRADA, que e a pior
+        # combinacao - nao ha sintoma, e quem le nao tem como desconfiar.
+        #
+        # Eram duas causas somadas, e as duas sao do upstream:
+        #  (a) count=10 por padrao, num universo de doze;
+        #  (b) ordenacao por updated_at DESC na camada de dados - e o campo NAO
+        #      e tocado por file/add. A base mais ESTAVEL era a primeira a sumir:
+        #      quanto mais antiga e confiavel, mais invisivel.
+        #
+        # Ordenar por NOME porque esta e uma listagem de DESCOBERTA: o que
+        # importa e EXISTIR, e nao ter sido mexida por ultimo. Recencia e a ordem
+        # certa para uma tela de 'o que editei'; e a errada para 'o que existe'.
+        knowledge_bases.sort(key=lambda k: (k.get('name') or '').lower())
+
+        # O TOTAL JA EXISTIA E ERA DESCARTADO: a camada de dados calcula
+        # select(func.count()) e devolve em result.total. Cortar sem dizer quanto
+        # ficou de fora e o que transforma um limite em APAGAMENTO.
+        total = getattr(result, 'total', None)
+        if total is None:
+            total = skip + len(knowledge_bases)
+        truncated = (skip + len(knowledge_bases)) < total
+
+        payload = {
+            'total': total,
+            'shown': len(knowledge_bases),
+            'truncated': truncated,
+            'knowledge_bases': knowledge_bases,
+        }
+        if truncated:
+            payload['note'] = (
+                'INCOMPLETE listing: %d of %d knowledge bases shown. Raise '
+                'count or use skip before concluding that a knowledge base '
+                'does not exist.' % (len(knowledge_bases), total)
+            )
+        return json.dumps(payload, ensure_ascii=False)
     except Exception as e:
         log.exception(f'list_knowledge_bases error: {e}')
         return json.dumps({'error': str(e)})
