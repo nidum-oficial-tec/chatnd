@@ -242,6 +242,43 @@ def conferir_bases_vazias(contagens, devem_ficar_vazias):
     return achados
 
 
+def conferir_colecoes_fora_do_config(contagens, declaradas, excluidas):
+    """Colecao existe no painel e NAO esta declarada em lugar nenhum?
+
+    O BURACO QUE ESTA CLASSE FECHA, medido em 10/09/2026: a colecao 'Projetos'
+    (a antiga nd-projetos, 17 arquivos) sobreviveu ao passo 9 da migracao e
+    continuou VIVA no painel - acessivel ao agente, aparecendo na listagem de
+    bases, competindo na busca.
+
+    E NENHUM RELATORIO A VIA. O de orfaos compara o sync_config com o repo, e ela
+    nao esta no config; a classe base_indevida compara as pastas-mae DECLARADAS
+    como excluidas, e ela nao e uma delas. Ficava exatamente no vao entre os dois:
+    invisivel para quem confere e visivel para quem pergunta.
+
+    E o D37 numa forma nova: nao e comparacao que da zero contra zero, e
+    comparacao que NUNCA ACONTECE. Um objeto que nao esta em nenhuma das duas
+    listas nao e conferido por nenhuma das duas conferencias.
+
+    Colecao VAZIA fora do config nao acusa: e o estado de quem foi esvaziada e
+    espera exclusao manual, que e passo legitimo da migracao.
+    """
+    conhecidas = {_fold(x).lower() for x in (declaradas or [])}
+    conhecidas |= {_fold(x).lower() for x in (excluidas or [])}
+    achados = []
+    for nome, n in sorted((contagens or {}).items()):
+        if _fold(nome).lower() in conhecidas:
+            continue
+        if not n:
+            continue
+        achados.append(_achado(
+            "colecao_fora_do_config",
+            "a colecao %r existe no painel com %d arquivo(s) e nao esta no "
+            "sync_config nem entre as pastas-mae excluidas" % (nome, n),
+            "painel x sync_config",
+            "a esteira nao a mantem e nenhum relatorio a confere, mas o agente a "
+            "ve e busca nela - o conteudo dela envelhece sem que nada acuse"))
+    return achados
+
 def codigo_de_saida(achados):
     """2 = achou (RESULTADO), 0 = limpo, 1 fica reservado para FALHA do script.
 
@@ -249,6 +286,16 @@ def codigo_de_saida(achados):
     vermelho ao cumprir a funcao treina todo mundo a ignorar o vermelho (D30).
     """
     return 2 if achados else 0
+
+def _bases_declaradas(esteira):
+    """As chaves de 'colecoes' do sync_config - le da esteira, nao de copia."""
+    try:
+        cfg = json.loads(_ler(os.path.join(esteira or "", "_scripts",
+                                           "sync_config.json")))
+    except Exception:
+        return []
+    return list((cfg.get("colecoes") or {}).keys())
+
 
 def _bases_que_ficam_vazias(esteira):
     """Pastas-mae DECLARADAS como excluidas: nenhuma delas deveria ter base com
@@ -555,6 +602,8 @@ def conferir(plataforma=None, esteira=None):
             "silenciosa de um conferidor mentir"))
     else:
         achados.extend(conferir_bases_vazias(contagens, _bases_que_ficam_vazias(esteira)))
+        achados.extend(conferir_colecoes_fora_do_config(
+            contagens, _bases_declaradas(esteira), _bases_que_ficam_vazias(esteira)))
 
     # E - fixture com caminho de pasta inexistente
     pastas = _pastas_do_repo(esteira)
@@ -610,6 +659,8 @@ _TITULOS = {
     "id_fantasma": "Ids de colecao citados na doc e ausentes do config",
     "nao_conferido": ("CLASSES QUE NAO FORAM CONFERIDAS - leia antes de concluir "
                        "que esta tudo bem"),
+    "colecao_fora_do_config": ("Colecoes no painel que a esteira NAO mantem "
+                               "(fora do config e fora das excluidas)"),
     "modelo_renomeado": ("Ids de modelo cujo NOME DE EXIBICAO mudou "
                          "(nao e erro: falta a ligacao escrita)"),
     "fixture_vencida": ("Fixtures apontando para pasta que nao existe "
