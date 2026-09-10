@@ -1,0 +1,93 @@
+# Limpeza SEMANAL do armazenamento do ChatND (decisao do Davi, 2026-09-10):
+#   - gerados-antigos: PPTX/HTML/PDF/DOCX/XLSX do gerador com mais de 30 dias saem do R2,
+#     do registro e da copia local (mesma retencao que o audio TTS ja tem);
+#   - anexos-antigos: anexo de chat sem uso ha 60 dias sai do INDICE (o arquivo fica).
+# Roda no runner com o script _nidum_manutencao/limpeza_armazenamento.py (o mesmo que roda
+# dentro do container para 'orfaos-locais', que precisa do volume).
+#
+# SEGREDOS (copiar dos da esteira, onde ja existem): PROD_DATABASE_URL (URL publica do
+#   Postgres), R2_ENDPOINT_URL, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY.
+# VARIAVEL do repo: LIMPEZA_ANEXOS_REAL = 'true' liga o modo real de anexos-antigos. Ate la,
+#   anexos roda em SIMULACAO (a lista dos 44 primeiros foi mostrada ao Davi em 10/09; o
+#   modo real de anexos so entra com o OK dele). gerados-antigos roda REAL desde o inicio.
+# Resultado: sumario do Actions + issue UNICA "[ChatND] Limpeza semanal do armazenamento"
+#   (dedup por titulo: comenta se existe, cria se nao).
+
+name: ChatND - limpeza semanal do armazenamento
+
+on:
+  schedule:
+    - cron: '30 7 * * 1'   # segunda 07:30 UTC (depois da higiene da esteira, 07:00)
+  workflow_dispatch:
+    inputs:
+      simular:
+        description: 'Simulacao (nao apaga nada)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: limpeza-semanal
+  cancel-in-progress: false
+
+jobs:
+  limpar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --quiet psycopg2-binary boto3
+
+      - name: Limpar
+        id: limpar
+        env:
+          PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+          R2_ENDPOINT_URL: ${{ secrets.R2_ENDPOINT_URL }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          ANEXOS_REAL: ${{ vars.LIMPEZA_ANEXOS_REAL }}
+        run: |
+          set -eu
+          if [ -z "${PROD_DATABASE_URL:-}" ]; then
+            echo "PROD_DATABASE_URL nao configurado neste repositorio (copiar da esteira)."; exit 1
+          fi
+          OUT="$RUNNER_TEMP/limpeza.txt"
+          EXEC="--executar"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.simular }}" = "true" ]; then
+            EXEC=""
+          fi
+          EXEC_ANEXOS=""
+          if [ -n "$EXEC" ] && [ "${ANEXOS_REAL:-}" = "true" ]; then EXEC_ANEXOS="--executar"; fi
+          {
+            echo "== gerados-antigos (30 dias) ${EXEC:-SIMULACAO} =="
+            python _nidum_manutencao/limpeza_armazenamento.py gerados-antigos --dias 30 $EXEC
+            echo
+            echo "== anexos-antigos (60 dias) ${EXEC_ANEXOS:-SIMULACAO} =="
+            python _nidum_manutencao/limpeza_armazenamento.py anexos-antigos --dias 60 $EXEC_ANEXOS
+          } 2>&1 | tee "$OUT"
+          { echo '```'; cat "$OUT"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Issue unica (dedup)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          OUT="$RUNNER_TEMP/limpeza.txt"
+          [ -f "$OUT" ] || exit 0
+          TITLE="[ChatND] Limpeza semanal do armazenamento"
+          BODY="$RUNNER_TEMP/limpeza_body.md"
+          {
+            echo "Limpeza de $(date -u +'%F %T') UTC - [run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
+            echo; echo '```'; tail -c 3500 "$OUT"; echo '```'
+          } > "$BODY"
+          NUM=$(gh issue list -R "${{ github.repository }}" --state open --search "$TITLE in:title" --json number -q '.[0].number' 2>/dev/null || echo "")
+          if [ -n "$NUM" ]; then
+            gh issue comment "$NUM" -R "${{ github.repository }}" --body-file "$BODY" || true
+          else
+            gh issue create -R "${{ github.repository }}" --title "$TITLE" --body-file "$BODY" || true
+          fi

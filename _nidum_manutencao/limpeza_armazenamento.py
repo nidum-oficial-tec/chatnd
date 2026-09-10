@@ -2,8 +2,13 @@
 """
 limpeza_armazenamento.py - higiene do armazenamento do ChatND (volume, R2, indice).
 
-RODA DENTRO DO CONTAINER do servico ChatND (precisa de DATABASE_URL, do volume em
-/app/backend/data e das variaveis S3_* do R2). Transporte, como no runbook de threads:
+ONDE RODA:
+  - orfaos-locais: DENTRO DO CONTAINER do ChatND (precisa do volume em /app/backend/data).
+    Transporte como no runbook de threads (base64 em pedacos de 2000 chars - a linha do
+    railway ssh trunca acima disso):
+  - gerados-antigos e anexos-antigos: em QUALQUER lugar com acesso ao banco e ao R2 - o
+    workflow semanal (.github/workflows/limpeza_semanal.yml) roda no runner do Actions
+    com PROD_DATABASE_URL e R2_* (mesmos secrets do backup na esteira).
 
     base64 -w0 _nidum_manutencao/limpeza_armazenamento.py > /tmp/l.b64
     railway ssh --service ChatND -- bash -c "echo $(cat /tmp/l.b64) | base64 -d > /tmp/limpeza.py && python3 /tmp/limpeza.py orfaos-locais"
@@ -64,16 +69,23 @@ def mb(n):
 
 def conectar():
     import psycopg2
-    return psycopg2.connect(os.environ["DATABASE_URL"])
+    url = os.environ.get("DATABASE_URL") or os.environ.get("PROD_DATABASE_URL")
+    if not url:
+        raise SystemExit("ABORTA: falta DATABASE_URL (container) ou PROD_DATABASE_URL (runner).")
+    return psycopg2.connect(url)
+
+
+def _env2(a, b):
+    return os.environ.get(a) or os.environ.get(b)
 
 
 def s3_client():
     import boto3
     return boto3.client(
         "s3",
-        endpoint_url=os.environ.get("S3_ENDPOINT_URL"),
-        aws_access_key_id=os.environ.get("S3_ACCESS_KEY_ID"),
-        aws_secret_access_key=os.environ.get("S3_SECRET_ACCESS_KEY"),
+        endpoint_url=_env2("S3_ENDPOINT_URL", "R2_ENDPOINT_URL"),
+        aws_access_key_id=_env2("S3_ACCESS_KEY_ID", "R2_ACCESS_KEY_ID"),
+        aws_secret_access_key=_env2("S3_SECRET_ACCESS_KEY", "R2_SECRET_ACCESS_KEY"),
         region_name=os.environ.get("S3_REGION_NAME") or "auto",
     )
 
@@ -89,6 +101,8 @@ def s3_key_de(path):
 # --------------------------------------------------------------------------- modos
 
 def orfaos_locais(args):
+    if not os.path.isdir(UPLOADS):
+        raise SystemExit("orfaos-locais so roda dentro do container (nao achei %s)." % UPLOADS)
     conn = conectar()
     cur = conn.cursor()
     cur.execute("select id from file")
