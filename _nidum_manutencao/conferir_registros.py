@@ -242,8 +242,26 @@ def conferir_bases_vazias(contagens, devem_ficar_vazias):
     return achados
 
 
-def conferir_colecoes_fora_do_config(contagens, declaradas, excluidas):
+def conferir_colecoes_fora_do_config(contagens, ids_por_nome, ids_declarados,
+                                     excluidas):
     """Colecao existe no painel e NAO esta declarada em lugar nenhum?
+
+    A COMPARACAO E POR ID, e a primeira versao errou isso. Ela casava o NOME do
+    painel com a CHAVE do sync_config, e as duas divergem de proposito: a chave
+    e a pasta-mae do SharePoint ("1 - Fonte", "3 - Reunioes") e o nome e o rotulo
+    da base ("Fonte", "Reunioes"). Resultado medido em 10/09: acusou 'Fonte' (85
+    arquivos) e 'Reunioes' (78) como fora do config - as duas MAIORES bases da
+    casa, as duas mantidas pela esteira todo dia.
+
+    E o campo 'nome' do config nao salvaria: ele carrega anotacao editorial
+    ("Fonte (reaproveitada: era nd-fonte; os 83 sao os mesmos)"), que nunca vai
+    bater com o rotulo do painel.
+
+    Falso positivo aqui e pior que em outras classes. Esta e a classe que existe
+    para ser lida quando alguem pergunta "sobrou alguma base velha?" - se ela
+    acusa as duas maiores toda semana, aprende-se a pular a secao, e no dia em
+    que uma base velha de verdade aparecer ninguem vai estar olhando. Id nao
+    tem sinonimo: ou a esteira mantem aquela base, ou nao mantem.
 
     O BURACO QUE ESTA CLASSE FECHA, medido em 10/09/2026: a colecao 'Projetos'
     (a antiga nd-projetos, 17 arquivos) sobreviveu ao passo 9 da migracao e
@@ -262,11 +280,16 @@ def conferir_colecoes_fora_do_config(contagens, declaradas, excluidas):
     Colecao VAZIA fora do config nao acusa: e o estado de quem foi esvaziada e
     espera exclusao manual, que e passo legitimo da migracao.
     """
-    conhecidas = {_fold(x).lower() for x in (declaradas or [])}
-    conhecidas |= {_fold(x).lower() for x in (excluidas or [])}
+    mantidos = {str(x).strip() for x in (ids_declarados or []) if x}
+    # As pastas-mae DECLARADAS como excluidas continuam casando por NOME: elas nao
+    # tem id no config (nao ha base declarada para elas), e uma base com esse nome
+    # e assunto de conferir_bases_vazias, nao desta classe.
+    por_nome = {_fold(x).lower() for x in (excluidas or [])}
     achados = []
     for nome, n in sorted((contagens or {}).items()):
-        if _fold(nome).lower() in conhecidas:
+        if str((ids_por_nome or {}).get(nome) or "").strip() in mantidos:
+            continue
+        if _fold(nome).lower() in por_nome:
             continue
         if not n:
             continue
@@ -287,14 +310,24 @@ def codigo_de_saida(achados):
     """
     return 2 if achados else 0
 
-def _bases_declaradas(esteira):
-    """As chaves de 'colecoes' do sync_config - le da esteira, nao de copia."""
+def _ids_declarados(esteira):
+    """Os IDS de 'colecoes' do sync_config - le da esteira, nao de copia.
+
+    IDS e nao chaves: a chave e a pasta-mae ("1 - Fonte") e o painel mostra o
+    rotulo ("Fonte"). Comparar os dois acusava as duas maiores bases da casa como
+    "fora do config" - ver conferir_colecoes_fora_do_config.
+    """
     try:
         cfg = json.loads(_ler(os.path.join(esteira or "", "_scripts",
                                            "sync_config.json")))
     except Exception:
         return []
-    return list((cfg.get("colecoes") or {}).keys())
+    saida = []
+    for info in (cfg.get("colecoes") or {}).values():
+        cid = str(((info or {}).get("id") or "")).strip()
+        if cid and not cid.startswith("PREENCHER"):
+            saida.append(cid)
+    return saida
 
 
 def _bases_que_ficam_vazias(esteira):
@@ -425,7 +458,7 @@ def _contagens_do_painel(esteira):
     for cid, nome in conhecidas.items():
         colecoes.setdefault(nome or cid, {"id": cid})
 
-    out = {}
+    out, ids_por_nome = {}, {}
     for nome, info in colecoes.items():
         cid = ((info or {}).get("id") or "").strip()
         if not cid or cid.startswith("PREENCHER"):
@@ -447,7 +480,11 @@ def _contagens_do_painel(esteira):
             return None, ("a base nao respondeu para a colecao %r - credencial "
                           "sem leitura nela, ou a colecao nao existe mais" % nome)
         out[nome] = total
-    return out, None
+        ids_por_nome[nome] = cid
+    # (contagens por nome, id de cada nome). O id viaja junto porque a comparacao
+    # de "esta no config?" e por ID - nome do painel e chave do config divergem de
+    # proposito. Ver conferir_colecoes_fora_do_config.
+    return (out, ids_por_nome), None
 
 
 _RE_ID_MODELO = re.compile(r"`(nidum-[a-z0-9-]+)`")
@@ -649,8 +686,8 @@ def conferir(plataforma=None, esteira=None):
     # G - base que deveria estar vazia e nao esta. Precisa das contagens do painel,
     # que so existem com credencial; sem ela, a classe fica de fora E ISSO E DITO no
     # relatorio, em vez de passar por "nada encontrado".
-    contagens, motivo = _seguro(_contagens_do_painel, esteira) or (None, "erro inesperado na coleta")
-    if contagens is None:
+    dados, motivo = _seguro(_contagens_do_painel, esteira) or (None, "erro inesperado na coleta")
+    if dados is None:
         achados.append(_achado(
             "nao_conferido",
             "base_indevida NAO foi conferida: %s" % motivo,
@@ -658,9 +695,11 @@ def conferir(plataforma=None, esteira=None):
             "classe nao conferida contada como 'nada encontrado' e a forma mais "
             "silenciosa de um conferidor mentir"))
     else:
+        contagens, ids_por_nome = dados
         achados.extend(conferir_bases_vazias(contagens, _bases_que_ficam_vazias(esteira)))
         achados.extend(conferir_colecoes_fora_do_config(
-            contagens, _bases_declaradas(esteira), _bases_que_ficam_vazias(esteira)))
+            contagens, ids_por_nome, _ids_declarados(esteira),
+            _bases_que_ficam_vazias(esteira)))
 
     # E - fixture com caminho de pasta inexistente
     pastas = _pastas_do_repo(esteira)

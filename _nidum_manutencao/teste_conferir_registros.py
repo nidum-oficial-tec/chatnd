@@ -94,6 +94,40 @@ def main():
     check("acento nao faz a base escapar",
           len(CR.conferir_bases_vazias({u"Finan\u00e7as": 3}, ["Financas"])) == 1)
 
+    print("\n== colecao fora do config: a comparacao e por ID ==")
+    # O FALSO POSITIVO, medido em producao (10/09/2026): a primeira versao casava o
+    # NOME do painel com a CHAVE do sync_config. As duas divergem DE PROPOSITO - a
+    # chave e a pasta-mae do SharePoint ("1 - Fonte") e o nome e o rotulo da base
+    # ("Fonte"). O relatorio acusou 'Fonte' (85 arquivos) e 'Reunioes' (78) como
+    # fora do config: as duas MAIORES bases da casa, mantidas todo dia.
+    #
+    # Falso positivo aqui e pior que noutras classes: esta e a secao que alguem le
+    # para perguntar "sobrou base velha?". Se ela acusa as duas maiores toda
+    # semana, aprende-se a pular a secao - e no dia da base velha de verdade
+    # ninguem esta olhando.
+    contagens = {"Produtos": 209, "Fonte": 85, u"Reuni\u00f5es": 78, "Projetos": 17}
+    ids_nome = {"Produtos": "id-prod", "Fonte": "id-fonte",
+                u"Reuni\u00f5es": "id-reu", "Projetos": "id-proj"}
+    declarados = ["id-prod", "id-fonte", "id-reu"]        # o config nao tem Projetos
+    a = CR.conferir_colecoes_fora_do_config(contagens, ids_nome, declarados, [])
+    check("so a base fora do config e acusada", len(a) == 1)
+    check("e e a certa (Projetos)", "Projetos" in str(a))
+    check("'Fonte' NAO e acusada (chave '1 - Fonte' x nome 'Fonte')",
+          "Fonte" not in str(a))
+    check("'Reunioes' NAO e acusada (chave '3 - Reunioes' x nome 'Reunioes')",
+          u"Reuni\u00f5es" not in str(a))
+    check("base fora do config e VAZIA -> silencio (espera exclusao manual)",
+          CR.conferir_colecoes_fora_do_config(
+              {"Projetos": 0}, {"Projetos": "id-proj"}, declarados, []) == [])
+    check("pasta-mae declarada excluida continua casando por NOME",
+          CR.conferir_colecoes_fora_do_config(
+              {"Financas": 3}, {"Financas": "id-fin"}, declarados, ["Financas"]) == [])
+    # Se o id nao chega (nome sem par no mapa), NAO se conclui que esta declarada:
+    # sem id nao ha como afirmar que a esteira mantem, e o silencio seria conclusao.
+    check("nome sem id conhecido -> acusa (nao presume declarada)",
+          len(CR.conferir_colecoes_fora_do_config(
+              {"Misteriosa": 4}, {}, declarados, [])) == 1)
+
     print("\n== o catalogo do painel NAO pode falhar calado ==")
     # O DEFEITO, achado rodando o proprio conferidor em 10/09/2026: a coleta do
     # catalogo fazia `except Exception: catalogo = None` e seguia. Sem catalogo,
@@ -163,9 +197,11 @@ def main():
         _u.urlopen = _por_pagina
         out3, motivo3 = CR._contagens_do_painel(tmp)
         check("paginou ate o total (nao parou na pagina 1)",
-              motivo3 is None and out3 is not None and len(out3) == 3)
+              motivo3 is None and out3 is not None and len(out3[0]) == 3)
         check("a colecao que so existia na pagina 2 entrou na conta",
-              bool(out3) and "Projetos" in out3)
+              bool(out3) and "Projetos" in out3[0])
+        check("e o id dela viaja junto (a comparacao e por id)",
+              bool(out3) and out3[1].get("Projetos") == "c")
 
         # E se a paginacao NAO entregar o que o painel declara, e falha - nao
         # "achei menos". Concluir 'nada fora do config' sobre catalogo incompleto
