@@ -374,20 +374,54 @@ def _contagens_do_painel(esteira):
     # ("modelo_renomeado NAO foi conferida: a base nao respondeu a /api/v1/models/")
     # e por isso a gente SABE que ela nao foi conferida. Duas chamadas irmas, a
     # mesma falha possivel, e so uma delas avisava.
-    try:
-        catalogo = _pegar("/api/v1/knowledge/")
-    except Exception as e:
-        return None, ("a base nao respondeu a /api/v1/knowledge/ (%s) - sem o "
-                      "catalogo do painel a classe colecao_fora_do_config nao tem "
-                      "o que conferir, e devolveria zero sem olhar" % e)
-    if not isinstance(catalogo, list):
-        return None, ("/api/v1/knowledge/ nao devolveu uma lista (veio %s) - sem o "
-                      "catalogo do painel a classe colecao_fora_do_config devolveria "
-                      "zero sem olhar" % type(catalogo).__name__)
+    # O ENDPOINT DEVOLVE {items, total} E PAGINA, e a pagina NAO e negociavel: o
+    # /api/v1/knowledge/ so aceita `page`, com o tamanho fixo em PAGE_ITEM_COUNT.
+    # E a mesma armadilha do list_knowledge_bases (PR #66): ler a primeira pagina e
+    # chamar de catalogo funciona ate o dia em que existirem mais bases que uma
+    # pagina - e nesse dia a base que faltar e justamente a que ninguem confere.
+    # Por isso o laco usa `total` como criterio de parada, e nao "veio menos que
+    # pedi": so `total` sabe quantas existem.
     conhecidas = {}
-    for k in catalogo:
-        if isinstance(k, dict) and k.get("id"):
-            conhecidas[str(k["id"]).strip()] = (k.get("name") or "").strip()
+    total_declarado, pagina = None, 1
+    while True:
+        try:
+            d = _pegar("/api/v1/knowledge/?page=%d" % pagina)
+        except Exception as e:
+            return None, ("a base nao respondeu a /api/v1/knowledge/ (%s) - sem o "
+                          "catalogo do painel a classe colecao_fora_do_config nao "
+                          "tem o que conferir, e devolveria zero sem olhar" % e)
+        if isinstance(d, list):          # formato antigo: lista crua
+            itens, total_declarado = d, len(d)
+        elif isinstance(d, dict) and isinstance(d.get("items"), list):
+            itens = d["items"]
+            if total_declarado is None:
+                total_declarado = d.get("total")
+        else:
+            return None, ("/api/v1/knowledge/ nao devolveu {items,total} nem lista "
+                          "(veio %s) - sem o catalogo do painel a classe "
+                          "colecao_fora_do_config devolveria zero sem olhar"
+                          % type(d).__name__)
+        antes = len(conhecidas)
+        for k in itens:
+            if isinstance(k, dict) and k.get("id"):
+                conhecidas[str(k["id"]).strip()] = (k.get("name") or "").strip()
+        # Para quando a pagina nao acrescenta NADA de novo - cobre tanto o fim da
+        # lista quanto um endpoint que ignora `page` e devolve sempre a primeira.
+        # Nos dois casos quem decide se o resultado presta e a conferencia de
+        # `total` logo abaixo, e nao este laco.
+        if not itens or len(conhecidas) == antes:
+            break
+        if not isinstance(total_declarado, int) or len(conhecidas) >= total_declarado:
+            break
+        pagina += 1
+        if pagina > 200:                 # cinto, caso as duas guardas acima falhem
+            return None, ("/api/v1/knowledge/ nao termina de paginar (200 paginas) "
+                          "- catalogo incompleto, nao da para concluir nada")
+    if isinstance(total_declarado, int) and len(conhecidas) < total_declarado:
+        return None, ("o painel declara %d colecoes e a paginacao entregou %d - "
+                      "catalogo INCOMPLETO, e concluir 'nada fora do config' sobre "
+                      "um catalogo incompleto e exatamente a mentira que esta "
+                      "classe existe para evitar" % (total_declarado, len(conhecidas)))
     for cid, nome in conhecidas.items():
         colecoes.setdefault(nome or cid, {"id": cid})
 

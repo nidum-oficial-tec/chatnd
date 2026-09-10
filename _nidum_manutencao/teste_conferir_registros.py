@@ -135,14 +135,46 @@ def main():
             def __exit__(self, *a):
                 return False
 
-        # A OUTRA FORMA da mesma falha: responde 200 com algo que nao e lista (o
-        # /api/v1/models/ ja devolve nao-JSON nesta base). Sem esta metade, um
-        # endpoint que devolvesse {} passaria e a classe ficaria cega de novo.
+        # A OUTRA FORMA da mesma falha: responde 200 com um dict que nao traz
+        # 'items'. Sem esta metade, um endpoint que devolvesse {} passaria e a
+        # classe ficaria cega de novo.
         _u.urlopen = lambda *a, **k: _Resp(b'{"detail":"nao autorizado"}')
         out2, motivo2 = CR._contagens_do_painel(tmp)
-        check("catalogo que nao e lista -> None", out2 is None)
+        check("catalogo sem 'items' -> None", out2 is None)
         check("e o motivo diz o que veio no lugar",
-              bool(motivo2) and "lista" in motivo2)
+              bool(motivo2) and "dict" in motivo2)
+
+        # PAGINACAO: o endpoint devolve {items,total} e so aceita `page`. Se a
+        # conferencia lesse a primeira pagina e parasse, a colecao fora do config
+        # que estivesse na pagina 2 nunca seria vista - e o relatorio diria
+        # "limpo". E o defeito do PR #66 (count=10 num universo de doze) na porta
+        # do lado. O painel abaixo tem 3 colecoes em 2 paginas.
+        paginas = {
+            1: b'{"items":[{"id":"a","name":"Produtos"},'
+               b'{"id":"b","name":"Fonte"}],"total":3}',
+            2: b'{"items":[{"id":"c","name":"Projetos"}],"total":3}',
+        }
+
+        def _por_pagina(req, *a, **k):
+            url = req.full_url if hasattr(req, "full_url") else str(req)
+            n = 2 if "page=2" in url else 1
+            return _Resp(paginas[n])
+
+        _u.urlopen = _por_pagina
+        out3, motivo3 = CR._contagens_do_painel(tmp)
+        check("paginou ate o total (nao parou na pagina 1)",
+              motivo3 is None and out3 is not None and len(out3) == 3)
+        check("a colecao que so existia na pagina 2 entrou na conta",
+              bool(out3) and "Projetos" in out3)
+
+        # E se a paginacao NAO entregar o que o painel declara, e falha - nao
+        # "achei menos". Concluir 'nada fora do config' sobre catalogo incompleto
+        # e a propria mentira que a classe existe para evitar.
+        _u.urlopen = lambda *a, **k: _Resp(
+            b'{"items":[{"id":"a","name":"Produtos"}],"total":9}')
+        out4, motivo4 = CR._contagens_do_painel(tmp)
+        check("catalogo incompleto (1 de 9) -> None, nao conclusao",
+              out4 is None and bool(motivo4) and "INCOMPLETO" in motivo4)
     finally:
         _u.urlopen = original
         os.environ.pop("OPENWEBUI_BASE_URL", None)
