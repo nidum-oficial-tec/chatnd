@@ -94,6 +94,60 @@ def main():
     check("acento nao faz a base escapar",
           len(CR.conferir_bases_vazias({u"Finan\u00e7as": 3}, ["Financas"])) == 1)
 
+    print("\n== o catalogo do painel NAO pode falhar calado ==")
+    # O DEFEITO, achado rodando o proprio conferidor em 10/09/2026: a coleta do
+    # catalogo fazia `except Exception: catalogo = None` e seguia. Sem catalogo,
+    # so as colecoes DECLARADAS entram na conta - e colecao_fora_do_config filtra
+    # fora justamente as declaradas. A intersecao fica vazia POR CONSTRUCAO e a
+    # classe devolve ZERO, indistinguivel de "conferi e esta limpo".
+    #
+    # E o D37 pela terceira vez, agora dentro da classe escrita para consertar o
+    # D37. Nao e distracao: e o que um `except` largo FAZ - transforma "falhei" em
+    # "nada encontrado". Por isso a prova mora aqui e nao numa leitura.
+    import json as _json
+    import tempfile
+    import urllib.request as _u
+
+    tmp = tempfile.mkdtemp()
+    os.makedirs(os.path.join(tmp, "_scripts"), exist_ok=True)
+    with open(os.path.join(tmp, "_scripts", "sync_config.json"), "w") as f:
+        _json.dump({"colecoes": {"Produtos": {"id": "abc"}}}, f)
+    os.environ["OPENWEBUI_BASE_URL"] = "http://exemplo.invalido"
+    os.environ["OPENWEBUI_API_KEY"] = "x"
+    original = _u.urlopen
+    try:
+        _u.urlopen = lambda *a, **k: (_ for _ in ()).throw(OSError("recusou"))
+        out, motivo = CR._contagens_do_painel(tmp)
+        check("catalogo indisponivel -> None (nao {} nem zero)", out is None)
+        check("e o motivo aponta o endpoint que falhou",
+              bool(motivo) and "/api/v1/knowledge/" in motivo)
+
+        class _Resp(object):
+            def __init__(self, corpo):
+                self._c = corpo
+
+            def read(self):
+                return self._c
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+        # A OUTRA FORMA da mesma falha: responde 200 com algo que nao e lista (o
+        # /api/v1/models/ ja devolve nao-JSON nesta base). Sem esta metade, um
+        # endpoint que devolvesse {} passaria e a classe ficaria cega de novo.
+        _u.urlopen = lambda *a, **k: _Resp(b'{"detail":"nao autorizado"}')
+        out2, motivo2 = CR._contagens_do_painel(tmp)
+        check("catalogo que nao e lista -> None", out2 is None)
+        check("e o motivo diz o que veio no lugar",
+              bool(motivo2) and "lista" in motivo2)
+    finally:
+        _u.urlopen = original
+        os.environ.pop("OPENWEBUI_BASE_URL", None)
+        os.environ.pop("OPENWEBUI_API_KEY", None)
+
     print("\n== o formato do achado e o mesmo das classes antigas ==")
     a = CR.conferir_frac_catastrofe("0.35")[0]
     for campo in ("classe", "detalhe", "onde", "consequencia"):

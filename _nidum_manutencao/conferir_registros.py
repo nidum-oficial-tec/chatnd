@@ -357,12 +357,35 @@ def _contagens_do_painel(esteira):
     # TODAS as colecoes do painel, e nao so as declaradas no config. Contar so as
     # configuradas era o que tornava a classe cega: base criada fora do config -
     # justamente o caso que ela deveria pegar - nao aparecia na conta.
+    #
+    # E ESTA CHAMADA NAO PODE FALHAR CALADA. A versao anterior fazia
+    # `except Exception: catalogo = None` e seguia: sem catalogo, `colecoes` fica
+    # so com as declaradas, e conferir_colecoes_fora_do_config filtra fora tudo
+    # que e declarado - a intersecao fica VAZIA POR CONSTRUCAO e a classe devolve
+    # zero. Zero de "conferi e nao ha nada" e zero de "nao consegui olhar" sao a
+    # mesma saida, e o relatorio nao tem como distinguir.
+    #
+    # Isso e o D37 pela terceira vez, agora DENTRO da classe escrita para consertar
+    # o D37. Vale registrar sem suavizar: o defeito nao e distracao, e a forma
+    # natural de um `except` largo - ele transforma "falhei" em "nada encontrado",
+    # que e a mentira mais silenciosa que um conferidor sabe contar.
+    #
+    # A prova de que importa esta no mesmo relatorio: _modelos_do_painel FALHA ALTO
+    # ("modelo_renomeado NAO foi conferida: a base nao respondeu a /api/v1/models/")
+    # e por isso a gente SABE que ela nao foi conferida. Duas chamadas irmas, a
+    # mesma falha possivel, e so uma delas avisava.
     try:
         catalogo = _pegar("/api/v1/knowledge/")
-    except Exception:
-        catalogo = None
+    except Exception as e:
+        return None, ("a base nao respondeu a /api/v1/knowledge/ (%s) - sem o "
+                      "catalogo do painel a classe colecao_fora_do_config nao tem "
+                      "o que conferir, e devolveria zero sem olhar" % e)
+    if not isinstance(catalogo, list):
+        return None, ("/api/v1/knowledge/ nao devolveu uma lista (veio %s) - sem o "
+                      "catalogo do painel a classe colecao_fora_do_config devolveria "
+                      "zero sem olhar" % type(catalogo).__name__)
     conhecidas = {}
-    for k in (catalogo or []):
+    for k in catalogo:
         if isinstance(k, dict) and k.get("id"):
             conhecidas[str(k["id"]).strip()] = (k.get("name") or "").strip()
     for cid, nome in conhecidas.items():
