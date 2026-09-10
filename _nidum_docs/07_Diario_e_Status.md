@@ -41,10 +41,12 @@ depois a RAM esta plana em 1,58 GB (era 10-17 GB). Medicao e metodo no D41.
 descartavel que ja nao existe (`TESTE_DATABASE_URL` de 09/07). O backup nao foi
 provado desde 09/07 - mas tambem nao ha evidencia de que esteja quebrado.
 
-**Proximo passo, na ordem do Davi:** lote de embedding 1 -> 64 (painel);
-provedor do reranker + sete testes da Fase A antes/depois; limpeza com
-`--executar --limite 20`; decisao do backup; acoes de painel (volumes,
-tts-thalita, backups "never", limites de gasto); rotacao da credencial WAL.
+**Decisoes do Davi no mesmo dia (10/09):** reranker FICA local (D42 - terceiro
+sub-processador; politica de retencao nao lida); zerar a base descartado (D43);
+limpeza executada (2.600 orfaos + 51 gerados; anexos aguardam OK); backup = PITR
+primario + dump semanal (#79 fechado com a causa); esteira 6h -> 12h; marcador
+NAO_INDEXAR.txt aprovado e implementado (PR na esteira); Fase E = o preset agentico
+e a proxima versao do ChatND - lista do que so o pipe faz esta no 08.
 Depois: voltar ao que estava - teste do `#`, contagem das 11, teste 1, primeira ficha.
 
 ## 2026-09-05 - O EIXO DAS COLECOES MUDA: base = pasta-mae
