@@ -19,7 +19,28 @@ descartado com o motivo escrito.
 **#2 · Wrappers invisíveis.** O usuário vê **uma IA só**. Sem os wrappers, o seletor
 mostra o nome do modelo — e "nunca revelar qual LLM/provedor está por trás" é regra
 inviolável do projeto, não preferência. **É o único item cuja ausência viola uma regra
-escrita.** Decidir primeiro; tudo o mais espera.
+escrita.**
+
+> **RESPOSTA DE 11/09 (pedido do Davi: configuração, código, ou impossível?):
+> é CONFIGURAÇÃO, e isso muda o prazo do corte.**
+>
+> Lendo `utils/models.py`: um preset já aparece no seletor com o **nome dele**
+> (`custom_model.name`), nunca com o do modelo base. O que revela o provedor é o
+> **modelo base estar listado como entrada própria** — e ele pode ser removido da
+> lista: basta uma entrada de override para ele (mesmo id, `base_model_id = None`)
+> com `is_active = False`, e o código faz `models.remove(model)`. O painel expõe
+> isso como o toggle de ativo/inativo do modelo.
+>
+> **Duas ressalvas honestas.** (a) O `owned_by`/`connection_type` do modelo base
+> continua viajando no payload do preset — o seletor os usa só para escolher
+> **ícone** (`ollama`, `external`), não texto, mas quem abrir a API ou o devtools
+> vê. Esconder do seletor e esconder de quem procura são barras diferentes. (b)
+> Conferi **lendo o código**, não testando no painel — o teste é abrir o seletor
+> com o base desativado e confirmar.
+>
+> **Consequência:** o #2 deixa de ser bloqueador de engenharia e vira um toggle por
+> modelo base. O prazo do corte passa a ser governado pelo **#6** (fechar os 28% de
+> ambição de deck) e pelo **#13** (canal do projeto).
 
 **#6 · Geração de arquivos.** Uso diário e uma das quatro rotas. A Fase A provou que a
 tool **funciona no preset** — o que falta é medido e nomeado: **ambição de deck a 28%**
