@@ -35,6 +35,14 @@ jobs:
     steps:
       - name: Baixar a plataforma
         uses: actions/checkout@v4
+        with:
+          # HISTORICO COMPLETO, e nao o commit do topo. A classe
+          # `publicado_divergente` procura o conteudo publicado entre os commits
+          # do arquivo para dizer QUAL LADO esta a frente; com o padrao
+          # (fetch-depth: 1) ela nao tem onde procurar e a resposta sai como
+          # "nao corresponde a nenhum commit" - que se le como "editaram
+          # producao". Foi o que aconteceu na primeira rodada.
+          fetch-depth: 0
 
       - name: Preparar Python
         uses: actions/setup-python@v5
