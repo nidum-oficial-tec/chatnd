@@ -410,7 +410,7 @@ def _publicado_do_painel(tipo, ident, _cache={}):
     return "", None                      # nao publicada: string vazia, nao None
 
 
-def _commit_correspondente(plataforma, rel, publicado_norm, limite=40):
+def _commit_correspondente(plataforma, rel, publicado_norm, limite=500):
     """Qual commit do repo tem EXATAMENTE o conteudo que esta publicado?
 
     RESPONDE A PERGUNTA QUE O TAMANHO DA DIFERENCA NAO RESPONDE: "qual lado esta
@@ -422,7 +422,13 @@ def _commit_correspondente(plataforma, rel, publicado_norm, limite=40):
     a distancia e contavel. Se nao casa com NENHUM, o conteudo publicado nunca
     existiu no repositorio - e ai a conversa e outra.
 
-    Devolve (sha_curto, data, quantos_commits_atras) ou None. Nao imprime codigo.
+    A JANELA E O HISTORICO INTEIRO (500 commits), e nao uma amostra. Com 40 a
+    resposta "nao corresponde a nenhum commit" ficava ambigua - podia significar
+    "editaram producao" ou "e mais antigo que a janela", e as duas levam a acoes
+    opostas. Uma busca que nao cobre tudo devolve uma conclusao que nao vale.
+
+    Devolve (sha_curto, data, quantos_commits_atras), "SEM_HISTORICO", ou None.
+    Nao imprime codigo em nenhum caso.
     """
     import subprocess
     def _git(*a):
