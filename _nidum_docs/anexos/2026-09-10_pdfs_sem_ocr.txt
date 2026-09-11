@@ -1,0 +1,45 @@
+PDFs do SharePoint cuja conversao nao extraiu NENHUM caractere
+Acervo conferido em 2026-09-10. Candidatos a OCR na origem.
+O .md existe no repo, com carimbo e corpo vazio; o destino o barra
+como 'stub vazio', entao eles NAO estao na base de conhecimento.
+==============================================================================
+
+ 1. Academia/Apresentação 12_08_2026.pdf
+ 2. Academia/Informativos Executivos Nidum/ACA_Informativo_Executivo_Nidum_1ªEdicao.pdf
+ 3. Academia/Informativos Executivos Nidum/ACA_Informativo_Executivo_Nidum_2ªEdicao.pdf
+ 4. Academia/Integração de Fornecedores/ACA_Integração_Fornecedores_v02.pdf
+ 5. Academia/Trilha de Aprendizagem ChatGPT/ACA_Módulo_1_ChatGPT.pdf
+ 6. Academia/Trilha de Aprendizagem ChatGPT/ACA_Módulo_2_ChatGPT.pdf
+ 7. Academia/Trilha de Aprendizagem ChatGPT/ACA_Módulo_3_ChatGPT.pdf
+ 8. Academia/Trilha de Aprendizagem ChatGPT/ACA_Módulo_4_ChatGPT.pdf
+ 9. Academia/Trilha de Aprendizagem ChatGPT/ACA_Módulo_5_ChatGPT.pdf
+10. Academia/Trilha de Aprendizagem ChatGPT/ACA_Módulo_6_ChatGPT.pdf
+11. Academia/Trilha de Aprendizagem ChatGPT/ACA_Módulo_7_ChatGPT.pdf
+12. Finanças/NF Coautor Intensivo/NFS 26 08 - 09/NFSe 26 08 AMELIA REISS.pdf
+13. Finanças/NF Coautor Intensivo/NFS 26 08 - 09/NFSe 26 08 DANIEL BISOL.pdf
+14. Finanças/NF Coautor Intensivo/NFS 26 08 - 09/NFSe 26 08 RAUL BUENO FILHO.pdf
+15. Gestão de Projetos/3.1.3 Portfólio de Projetos/1. Projeto Fazenda Fortaleza/1.2 Documentos/FAZ_Etapa 2_Análise de vocação mercadológica da área.pdf
+16. Gestão de Projetos/3.1.3 Portfólio de Projetos/2. Projeto MVP Ipanema/2.2 Pagamentos/Adiantamento 30% Lidar_Serviço Escaneamento 22.07.pdf
+17. Marketing/01. Marca/Logomarca/LOGO NIDUM VARIAÇÕES.pdf
+18. Operações/2. Retrofit/RTF-001-Ipanema_Apto_Rio de Janeiro/01-CADASTRO/DOCUMENTOS PARA DUO DILIGENCE/Conveção Reg. Int. Barão.pdf
+19. Operações/2. Retrofit/RTF-001-Ipanema_Apto_Rio de Janeiro/01-CADASTRO/PROJETOS EXISTENTES/PLOTAGEM.pdf
+20. Operações/2. Retrofit/RTF-001-Ipanema_Apto_Rio de Janeiro/03-DUE DILIGENCE SIMPLIFICADA/Certidões/02. Carlos Magno_Certidao de Casamento.pdf
+21. Operações/2. Retrofit/RTF-005-Meraki_Apto_Florianópolis/01-CADASTRO/DOCUMENTOS PARA DUO DILIGENCE/Certidão de Casamento AVERBAÇÃO DIVÓRCIO.pdf
+22. Operações/2. Retrofit/RTF-006-Casa Marília_Casa_Tamoboré-SP/01-CADASTRO/DOCUMENTOS PARA DUO DILIGENCE/Matrícula 38.460.pdf
+23. Operações/2. Retrofit/RTF-008-Virgínia_Apto_São Paulo/01-CADASTRO/DOCUMENTOS PARA DUO DILIGENCE/29MAI1985.pdf
+24. Operações/2. Retrofit/RTF-008-Virgínia_Apto_São Paulo/01-CADASTRO/DOCUMENTOS PARA DUO DILIGENCE/CPF (1).pdf
+25. Operações/2. Retrofit/RTF-008-Virgínia_Apto_São Paulo/01-CADASTRO/DOCUMENTOS PARA DUO DILIGENCE/CPF.pdf
+26. Operações/2. Retrofit/RTF-008-Virgínia_Apto_São Paulo/01-CADASTRO/DOCUMENTOS PARA DUO DILIGENCE/CertidaoCasamento (2).pdf
+27. Operações/2. Retrofit/RTF-008-Virgínia_Apto_São Paulo/01-CADASTRO/DOCUMENTOS PARA DUO DILIGENCE/PROIBIDO PLASTIFICAR.pdf
+28. Operações/2. Retrofit/RTF-009-Artefacto_Apto_Praia Brava-SC/01-CADASTRO/DOCUMENTOS PARA DUO DILIGENCE/Contrato CK Artefacto.pdf
+29. Operações/2. Retrofit/RTF-009-Artefacto_Apto_Praia Brava-SC/01-CADASTRO/DOCUMENTOS PARA DUO DILIGENCE/Documento Escaneado 6.pdf
+30. Operações/2. Retrofit/RTF-009-Artefacto_Apto_Praia Brava-SC/01-CADASTRO/DOCUMENTOS PARA DUO DILIGENCE/Documento Escaneado 7.pdf
+31. Operações/2. Retrofit/RTF-009-Artefacto_Apto_Praia Brava-SC/01-CADASTRO/DOCUMENTOS PARA DUO DILIGENCE/Documento Escaneado 8.pdf
+32. Operações/2. Retrofit/RTF-009-Artefacto_Apto_Praia Brava-SC/01-CADASTRO/DOCUMENTOS PARA DUO DILIGENCE/Documento Escaneado 9.pdf
+33. Produtos/Comitê Técnico/NIDUM_CT_Brasil_v2.pdf
+34. Produtos/Jornada Homologação de Fornecedores/HOMOLOGAÇÃO FORNECEDORES.pdf
+35. Produtos/Nidum Comunidades Vivas/PESQUISA DE CAMPO_Fazenda e Comunidade/ACA_APRESENTAÇÃO PESQUISA DE CAMPO - ACADEMIA.pdf
+36. Produtos/Nidum Fazenda/estudo_fazenda_fortaleza_dashcity.pdf
+37. Produtos/Nidum Fazenda/odramadafazendafortaleza.pdf
+38. Produtos/Nidum Prumo/M1_PRUMO_TRIAGEM_DEMANDA.pdf
+39. Produtos/Nidum Prumo/Prumo_Apresentação_Jul_2026_v1.pdf
