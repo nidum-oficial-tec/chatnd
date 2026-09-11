@@ -1,0 +1,66 @@
+# TRAVA A - arquivo publicado que muda tem que subir de versao.
+#
+# POR QUE (11/09/2026): o conferidor achou `chatnd` 1.65.0 no painel e 1.65.0 no
+# repo, com 1.148 linhas realmente diferentes - e `gerador_de_arquivos_nidum`
+# 2.8.2 x 2.8.2 com 543. Mesmo rotulo, conteudo diferente. Uma versao ATRASADA se
+# conta; duas coisas diferentes com o MESMO numero nao se veem, porque o numero
+# afirma que sao iguais e quem le acredita nele.
+#
+# Aqui o pipe e as tools sobem por API, MANUALMENTE - mergear na main NAO publica.
+# O `version:` e o unico fio entre "o que esta no ar" e "o que esta no repo".
+#
+# O QUE ELA NAO E: ela nao confere se o publicado bate com o repo (isso e o
+# conferidor de registros, classe `publicado_divergente`). Ela cuida do ROTULO.
+# Sozinha, nao teria impedido o caso de 11/09 - teria deixado rastro dele.
+#
+# VERMELHO AQUI E CERTO. O conferidor fica verde ao encontrar (D30) porque e
+# RELATORIO: vermelho de relatorio treina a ignorar vermelho. Trava e outra coisa:
+# reprova, e o conserto e uma linha so (subir o `version:`).
+
+name: Trava - bump de versao nos publicados
+
+on:
+  pull_request:
+    paths:
+      - '_nidum_tools/chatnd.py'
+      - '_nidum_tools/gerador_de_arquivos_nidum.py'
+      - '_nidum_tools/relatorio_ambientes_nidum.py'
+      - '_nidum_tools/sharepoint_nidum.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trava-bump-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o repositorio
+        uses: actions/checkout@v4
+        with:
+          # HISTORICO COMPLETO. A trava compara com o merge-base da base do PR;
+          # com o padrao (fetch-depth: 1) nao ha ancestral comum e o diff acusaria
+          # o repo inteiro. Foi assim que o clone raso fez a ancora do conferidor
+          # acusar producao - o mesmo erro custa duas vezes se nao for escrito.
+          fetch-depth: 0
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Provar a trava (offline)
+        # A decisao se prova sem git e sem PR. Se a prova cair, a trava nao vale
+        # como veredito - e melhor o PR parar aqui do que ser aprovado por uma
+        # regra que ninguem sabe se funciona.
+        working-directory: _nidum_manutencao
+        run: python teste_trava_bump.py
+
+      - name: Conferir o bump
+        run: |
+          python _nidum_manutencao/trava_bump.py \
+            --base "origin/${{ github.event.pull_request.base.ref }}" \
+            --topo "${{ github.event.pull_request.head.sha }}"
