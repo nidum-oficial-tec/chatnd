@@ -146,6 +146,42 @@ qualidade. A resposta foi alcance, sete vezes seguidas.
 
 ---
 
+## 2026-09-10 - AUDITORIA DE CUSTO DO RAILWAY: o que cada coisa e, e o que sai
+
+> Registro completo em `08_Decisoes_e_Pendencias.md`: **D40** (topologia e custo),
+> **D41** (`MALLOC_ARENA_MAX=2` fica), **D42** (reranker por API), **D43** (zerar a
+> base descartado) e a tabela de acoes pendentes da auditoria.
+
+**O que a auditoria mostrou (09/09, com a CLI e SQL so-leitura):** o custo do
+projeto era **RAM do container ChatND** (14,6 GB medios nos 3 dias antes do deploy),
+nao embedding (US$ 0,25 na semana de pico da esteira) nem armazenamento. O bucket
+`stocked-cup-MSag` (5 GB) e o WAL do PITR do Postgres, nao arquivos gerados; o bucket
+`Postgres-PITR` esta vazio; `tts-thalita` e uma POC de 30/07 sem trafego; ha dois
+volumes Postgres desanexados sendo cobrados.
+
+**O que mudou em producao:** nada por esta sessao. O deploy de 09/09 21:32 UTC
+(merge do #66) foi o primeiro a levar o `MALLOC_ARENA_MAX=2` do PR #65 - e 12 h
+depois a RAM esta plana em 1,58 GB (era 10-17 GB). Medicao e metodo no D41.
+
+**O que foi entregue:**
+- `_nidum_manutencao/limpeza_armazenamento.py` (PR proprio): tres modos com
+  simulacao por padrao, ja simulados em producao - 2.600 copias locais orfas
+  (90 MB), 51 arquivos gerados com mais de 30 dias (14 MB), 44 anexos de chat
+  parados ha mais de 60 dias (1.226 chunks, ~25 MB do indice).
+- Este registro (PR proprio).
+
+**Causa do #79 (esteira):** o teste mensal de restauracao aponta para um Postgres
+descartavel que ja nao existe (`TESTE_DATABASE_URL` de 09/07). O backup nao foi
+provado desde 09/07 - mas tambem nao ha evidencia de que esteja quebrado.
+
+**Decisoes do Davi no mesmo dia (10/09):** reranker FICA local (D42 - terceiro
+sub-processador; politica de retencao nao lida); zerar a base descartado (D43);
+limpeza executada (2.600 orfaos + 51 gerados; anexos aguardam OK); backup = PITR
+primario + dump semanal (#79 fechado com a causa); esteira 6h -> 12h; marcador
+NAO_INDEXAR.txt aprovado e implementado (PR na esteira); Fase E = o preset agentico
+e a proxima versao do ChatND - lista do que so o pipe faz esta no 08.
+Depois: voltar ao que estava - teste do `#`, contagem das 11, teste 1, primeira ficha.
+
 ## 2026-09-05 - O EIXO DAS COLECOES MUDA: base = pasta-mae
 
 > Entrada escrita na `main`. A entrada do fechamento da Fase A (03/09) esta no PR
