@@ -34,6 +34,7 @@ USO: py _nidum_manutencao/teste_conferir_registros.py
 """
 
 import os
+import shutil
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -93,6 +94,62 @@ def main():
     # pasta, e escapar por acento seria a mesma cegueira por outra porta.
     check("acento nao faz a base escapar",
           len(CR.conferir_bases_vazias({u"Finan\u00e7as": 3}, ["Financas"])) == 1)
+
+    print("\n== PUBLICADO x REPOSITORIO (doc 14) ==")
+    # A MAIOR LACUNA da varredura de cobertura: pipe e tools vao a producao por
+    # API, manualmente - mergear na main NAO publica -, e nada comparava os dois
+    # lados. O coracao do produto era o unico objeto que ninguem conferia.
+    import tempfile as _tf
+    raiz = _tf.mkdtemp()
+    os.makedirs(os.path.join(raiz, "_nidum_tools"), exist_ok=True)
+    alvo = os.path.join("_nidum_tools", "x.py")
+
+    def _escrever(txt):
+        with open(os.path.join(raiz, alvo), "w", encoding="utf-8") as f:
+            f.write(txt)
+
+    FONTE = '"""doc\nversion: 1.2.0\n"""\n\ndef f():\n    return 1\n'
+    _escrever(FONTE)
+    pub = (("funcao", "x", alvo),)
+
+    a = CR.conferir_publicado(raiz, pub, leitor=lambda t, i: (FONTE, None))
+    check("identico -> silencio", a == [])
+
+    # Fim de linha e espaco a direita NAO sao divergencia - senao o alarme vira
+    # ruido fixo, e alarme cronicamente vermelho e alarme desligado (D53).
+    a = CR.conferir_publicado(
+        raiz, pub,
+        leitor=lambda t, i: (FONTE.replace("\n", "\r\n") + "   \n\n", None))
+    check("CRLF e espaco a direita NAO viram divergencia", a == [])
+
+    # Mas comentario divergente VIRA: e justamente o que denuncia hotfix feito
+    # direto no painel.
+    a = CR.conferir_publicado(
+        raiz, pub, leitor=lambda t, i: (FONTE + "# hotfix no painel\n", None))
+    check("linha a mais no painel -> publicado_divergente",
+          len(a) == 1 and a[0]["classe"] == "publicado_divergente")
+    check("e o achado diz as DUAS versoes",
+          "painel version=1.2.0" in a[0]["detalhe"] and "repo version=1.2.0" in a[0]["detalhe"])
+    check("e NUNCA imprime o codigo (fonte tem valve e chave dentro)",
+          "def f()" not in str(a))
+
+    a = CR.conferir_publicado(raiz, pub, leitor=lambda t, i: ("", None))
+    check("nao publicada -> publicado_ausente",
+          len(a) == 1 and a[0]["classe"] == "publicado_ausente")
+
+    # O ESTADO OBRIGATORIO: nao consegui olhar NUNCA vira "igual". O
+    # /api/v1/models/ passou dias dizendo "nada encontrado" por nao conseguir
+    # conferir (D57).
+    a = CR.conferir_publicado(raiz, pub, leitor=lambda t, i: (None, "sem credencial"))
+    check("nao consegui olhar -> nao_conferido (nunca silencio)",
+          len(a) == 1 and a[0]["classe"] == "nao_conferido")
+
+    # Artefato que nao existe no repo nao e desta classe.
+    a = CR.conferir_publicado(raiz, (("funcao", "y", os.path.join("_nidum_tools", "nao_existe.py")),),
+                              leitor=lambda t, i: (FONTE, None))
+    check("artefato ausente do repo -> nao e desta classe", a == [])
+
+    shutil.rmtree(raiz, ignore_errors=True)
 
     print("\n== o formato do achado e o mesmo das classes antigas ==")
     a = CR.conferir_frac_catastrofe("0.35")[0]
