@@ -242,6 +242,66 @@ def conferir_bases_vazias(contagens, devem_ficar_vazias):
     return achados
 
 
+def conferir_colecoes_fora_do_config(contagens, ids_por_nome, ids_declarados,
+                                     excluidas):
+    """Colecao existe no painel e NAO esta declarada em lugar nenhum?
+
+    A COMPARACAO E POR ID, e a primeira versao errou isso. Ela casava o NOME do
+    painel com a CHAVE do sync_config, e as duas divergem de proposito: a chave
+    e a pasta-mae do SharePoint ("1 - Fonte", "3 - Reunioes") e o nome e o rotulo
+    da base ("Fonte", "Reunioes"). Resultado medido em 10/09: acusou 'Fonte' (85
+    arquivos) e 'Reunioes' (78) como fora do config - as duas MAIORES bases da
+    casa, as duas mantidas pela esteira todo dia.
+
+    E o campo 'nome' do config nao salvaria: ele carrega anotacao editorial
+    ("Fonte (reaproveitada: era nd-fonte; os 83 sao os mesmos)"), que nunca vai
+    bater com o rotulo do painel.
+
+    Falso positivo aqui e pior que em outras classes. Esta e a classe que existe
+    para ser lida quando alguem pergunta "sobrou alguma base velha?" - se ela
+    acusa as duas maiores toda semana, aprende-se a pular a secao, e no dia em
+    que uma base velha de verdade aparecer ninguem vai estar olhando. Id nao
+    tem sinonimo: ou a esteira mantem aquela base, ou nao mantem.
+
+    O BURACO QUE ESTA CLASSE FECHA, medido em 10/09/2026: a colecao 'Projetos'
+    (a antiga nd-projetos, 17 arquivos) sobreviveu ao passo 9 da migracao e
+    continuou VIVA no painel - acessivel ao agente, aparecendo na listagem de
+    bases, competindo na busca.
+
+    E NENHUM RELATORIO A VIA. O de orfaos compara o sync_config com o repo, e ela
+    nao esta no config; a classe base_indevida compara as pastas-mae DECLARADAS
+    como excluidas, e ela nao e uma delas. Ficava exatamente no vao entre os dois:
+    invisivel para quem confere e visivel para quem pergunta.
+
+    E o D37 numa forma nova: nao e comparacao que da zero contra zero, e
+    comparacao que NUNCA ACONTECE. Um objeto que nao esta em nenhuma das duas
+    listas nao e conferido por nenhuma das duas conferencias.
+
+    Colecao VAZIA fora do config nao acusa: e o estado de quem foi esvaziada e
+    espera exclusao manual, que e passo legitimo da migracao.
+    """
+    mantidos = {str(x).strip() for x in (ids_declarados or []) if x}
+    # As pastas-mae DECLARADAS como excluidas continuam casando por NOME: elas nao
+    # tem id no config (nao ha base declarada para elas), e uma base com esse nome
+    # e assunto de conferir_bases_vazias, nao desta classe.
+    por_nome = {_fold(x).lower() for x in (excluidas or [])}
+    achados = []
+    for nome, n in sorted((contagens or {}).items()):
+        if str((ids_por_nome or {}).get(nome) or "").strip() in mantidos:
+            continue
+        if _fold(nome).lower() in por_nome:
+            continue
+        if not n:
+            continue
+        achados.append(_achado(
+            "colecao_fora_do_config",
+            "a colecao %r existe no painel com %d arquivo(s) e nao esta no "
+            "sync_config nem entre as pastas-mae excluidas" % (nome, n),
+            "painel x sync_config",
+            "a esteira nao a mantem e nenhum relatorio a confere, mas o agente a "
+            "ve e busca nela - o conteudo dela envelhece sem que nada acuse"))
+    return achados
+
 # ---------------------------------------------------------------------------
 # PUBLICADO x REPOSITORIO  (desenho em _nidum_docs/14_Conferencia_do_Publicado.md)
 # ---------------------------------------------------------------------------
@@ -457,6 +517,26 @@ def codigo_de_saida(achados):
     """
     return 2 if achados else 0
 
+def _ids_declarados(esteira):
+    """Os IDS de 'colecoes' do sync_config - le da esteira, nao de copia.
+
+    IDS e nao chaves: a chave e a pasta-mae ("1 - Fonte") e o painel mostra o
+    rotulo ("Fonte"). Comparar os dois acusava as duas maiores bases da casa como
+    "fora do config" - ver conferir_colecoes_fora_do_config.
+    """
+    try:
+        cfg = json.loads(_ler(os.path.join(esteira or "", "_scripts",
+                                           "sync_config.json")))
+    except Exception:
+        return []
+    saida = []
+    for info in (cfg.get("colecoes") or {}).values():
+        cid = str(((info or {}).get("id") or "")).strip()
+        if cid and not cid.startswith("PREENCHER"):
+            saida.append(cid)
+    return saida
+
+
 def _bases_que_ficam_vazias(esteira):
     """Pastas-mae DECLARADAS como excluidas: nenhuma delas deveria ter base com
     conteudo. Le do sync_config, e nao de uma lista propria - duas copias de uma
@@ -517,18 +597,75 @@ def _contagens_do_painel(esteira):
     # TODAS as colecoes do painel, e nao so as declaradas no config. Contar so as
     # configuradas era o que tornava a classe cega: base criada fora do config -
     # justamente o caso que ela deveria pegar - nao aparecia na conta.
-    try:
-        catalogo = _pegar("/api/v1/knowledge/")
-    except Exception:
-        catalogo = None
+    #
+    # E ESTA CHAMADA NAO PODE FALHAR CALADA. A versao anterior fazia
+    # `except Exception: catalogo = None` e seguia: sem catalogo, `colecoes` fica
+    # so com as declaradas, e conferir_colecoes_fora_do_config filtra fora tudo
+    # que e declarado - a intersecao fica VAZIA POR CONSTRUCAO e a classe devolve
+    # zero. Zero de "conferi e nao ha nada" e zero de "nao consegui olhar" sao a
+    # mesma saida, e o relatorio nao tem como distinguir.
+    #
+    # Isso e o D37 pela terceira vez, agora DENTRO da classe escrita para consertar
+    # o D37. Vale registrar sem suavizar: o defeito nao e distracao, e a forma
+    # natural de um `except` largo - ele transforma "falhei" em "nada encontrado",
+    # que e a mentira mais silenciosa que um conferidor sabe contar.
+    #
+    # A prova de que importa esta no mesmo relatorio: _modelos_do_painel FALHA ALTO
+    # ("modelo_renomeado NAO foi conferida: a base nao respondeu a /api/v1/models/")
+    # e por isso a gente SABE que ela nao foi conferida. Duas chamadas irmas, a
+    # mesma falha possivel, e so uma delas avisava.
+    # O ENDPOINT DEVOLVE {items, total} E PAGINA, e a pagina NAO e negociavel: o
+    # /api/v1/knowledge/ so aceita `page`, com o tamanho fixo em PAGE_ITEM_COUNT.
+    # E a mesma armadilha do list_knowledge_bases (PR #66): ler a primeira pagina e
+    # chamar de catalogo funciona ate o dia em que existirem mais bases que uma
+    # pagina - e nesse dia a base que faltar e justamente a que ninguem confere.
+    # Por isso o laco usa `total` como criterio de parada, e nao "veio menos que
+    # pedi": so `total` sabe quantas existem.
     conhecidas = {}
-    for k in (catalogo or []):
-        if isinstance(k, dict) and k.get("id"):
-            conhecidas[str(k["id"]).strip()] = (k.get("name") or "").strip()
+    total_declarado, pagina = None, 1
+    while True:
+        try:
+            d = _pegar("/api/v1/knowledge/?page=%d" % pagina)
+        except Exception as e:
+            return None, ("a base nao respondeu a /api/v1/knowledge/ (%s) - sem o "
+                          "catalogo do painel a classe colecao_fora_do_config nao "
+                          "tem o que conferir, e devolveria zero sem olhar" % e)
+        if isinstance(d, list):          # formato antigo: lista crua
+            itens, total_declarado = d, len(d)
+        elif isinstance(d, dict) and isinstance(d.get("items"), list):
+            itens = d["items"]
+            if total_declarado is None:
+                total_declarado = d.get("total")
+        else:
+            return None, ("/api/v1/knowledge/ nao devolveu {items,total} nem lista "
+                          "(veio %s) - sem o catalogo do painel a classe "
+                          "colecao_fora_do_config devolveria zero sem olhar"
+                          % type(d).__name__)
+        antes = len(conhecidas)
+        for k in itens:
+            if isinstance(k, dict) and k.get("id"):
+                conhecidas[str(k["id"]).strip()] = (k.get("name") or "").strip()
+        # Para quando a pagina nao acrescenta NADA de novo - cobre tanto o fim da
+        # lista quanto um endpoint que ignora `page` e devolve sempre a primeira.
+        # Nos dois casos quem decide se o resultado presta e a conferencia de
+        # `total` logo abaixo, e nao este laco.
+        if not itens or len(conhecidas) == antes:
+            break
+        if not isinstance(total_declarado, int) or len(conhecidas) >= total_declarado:
+            break
+        pagina += 1
+        if pagina > 200:                 # cinto, caso as duas guardas acima falhem
+            return None, ("/api/v1/knowledge/ nao termina de paginar (200 paginas) "
+                          "- catalogo incompleto, nao da para concluir nada")
+    if isinstance(total_declarado, int) and len(conhecidas) < total_declarado:
+        return None, ("o painel declara %d colecoes e a paginacao entregou %d - "
+                      "catalogo INCOMPLETO, e concluir 'nada fora do config' sobre "
+                      "um catalogo incompleto e exatamente a mentira que esta "
+                      "classe existe para evitar" % (total_declarado, len(conhecidas)))
     for cid, nome in conhecidas.items():
         colecoes.setdefault(nome or cid, {"id": cid})
 
-    out = {}
+    out, ids_por_nome = {}, {}
     for nome, info in colecoes.items():
         cid = ((info or {}).get("id") or "").strip()
         if not cid or cid.startswith("PREENCHER"):
@@ -550,7 +687,11 @@ def _contagens_do_painel(esteira):
             return None, ("a base nao respondeu para a colecao %r - credencial "
                           "sem leitura nela, ou a colecao nao existe mais" % nome)
         out[nome] = total
-    return out, None
+        ids_por_nome[nome] = cid
+    # (contagens por nome, id de cada nome). O id viaja junto porque a comparacao
+    # de "esta no config?" e por ID - nome do painel e chave do config divergem de
+    # proposito. Ver conferir_colecoes_fora_do_config.
+    return (out, ids_por_nome), None
 
 
 _RE_ID_MODELO = re.compile(r"`(nidum-[a-z0-9-]+)`")
@@ -802,8 +943,8 @@ def conferir(plataforma=None, esteira=None):
     # G - base que deveria estar vazia e nao esta. Precisa das contagens do painel,
     # que so existem com credencial; sem ela, a classe fica de fora E ISSO E DITO no
     # relatorio, em vez de passar por "nada encontrado".
-    contagens, motivo = _seguro(_contagens_do_painel, esteira) or (None, "erro inesperado na coleta")
-    if contagens is None:
+    dados, motivo = _seguro(_contagens_do_painel, esteira) or (None, "erro inesperado na coleta")
+    if dados is None:
         achados.append(_achado(
             "nao_conferido",
             "base_indevida NAO foi conferida: %s" % motivo,
@@ -811,7 +952,11 @@ def conferir(plataforma=None, esteira=None):
             "classe nao conferida contada como 'nada encontrado' e a forma mais "
             "silenciosa de um conferidor mentir"))
     else:
+        contagens, ids_por_nome = dados
         achados.extend(conferir_bases_vazias(contagens, _bases_que_ficam_vazias(esteira)))
+        achados.extend(conferir_colecoes_fora_do_config(
+            contagens, ids_por_nome, _ids_declarados(esteira),
+            _bases_que_ficam_vazias(esteira)))
 
     # I - o que esta PUBLICADO x o que esta no repo (doc 14). Pipe e tools vao por
     # API, manualmente: mergear na main nao publica, e ate hoje nada comparava os
@@ -887,10 +1032,15 @@ _TITULOS = {
     "id_fantasma": "Ids de colecao citados na doc e ausentes do config",
     "nao_conferido": ("CLASSES QUE NAO FORAM CONFERIDAS - leia antes de concluir "
                        "que esta tudo bem"),
+    "colecao_fora_do_config": ("Colecoes no painel que a esteira NAO mantem "
+                               "(fora do config e fora das excluidas)"),
     "modelo_renomeado": ("Ids de modelo cujo NOME DE EXIBICAO mudou "
                          "(nao e erro: falta a ligacao escrita)"),
     "fixture_vencida": ("Fixtures apontando para pasta que nao existe "
                         "(LISTA PARA REVISAO: parte pode ser sintetica)"),
+    "frac_catastrofe": "FRAC_CATASTROFE fora do valor de desenho (0,25)",
+    "base_indevida": ("Base com conteudo que NAO devia receber arquivo "
+                      "(pasta-mae declarada como excluida)"),
     "publicado_divergente": ("O que esta PUBLICADO diverge do repositorio "
                              "(pipe e tools vao por API, nao por deploy)"),
     "publicado_ausente": "Existe no repo e NAO esta publicado no painel",

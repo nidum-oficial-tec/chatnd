@@ -95,6 +95,127 @@ def main():
     check("acento nao faz a base escapar",
           len(CR.conferir_bases_vazias({u"Finan\u00e7as": 3}, ["Financas"])) == 1)
 
+    print("\n== colecao fora do config: a comparacao e por ID ==")
+    # O FALSO POSITIVO, medido em producao (10/09/2026): a primeira versao casava o
+    # NOME do painel com a CHAVE do sync_config. As duas divergem DE PROPOSITO - a
+    # chave e a pasta-mae do SharePoint ("1 - Fonte") e o nome e o rotulo da base
+    # ("Fonte"). O relatorio acusou 'Fonte' (85 arquivos) e 'Reunioes' (78) como
+    # fora do config: as duas MAIORES bases da casa, mantidas todo dia.
+    #
+    # Falso positivo aqui e pior que noutras classes: esta e a secao que alguem le
+    # para perguntar "sobrou base velha?". Se ela acusa as duas maiores toda
+    # semana, aprende-se a pular a secao - e no dia da base velha de verdade
+    # ninguem esta olhando.
+    contagens = {"Produtos": 209, "Fonte": 85, u"Reuni\u00f5es": 78, "Projetos": 17}
+    ids_nome = {"Produtos": "id-prod", "Fonte": "id-fonte",
+                u"Reuni\u00f5es": "id-reu", "Projetos": "id-proj"}
+    declarados = ["id-prod", "id-fonte", "id-reu"]        # o config nao tem Projetos
+    a = CR.conferir_colecoes_fora_do_config(contagens, ids_nome, declarados, [])
+    check("so a base fora do config e acusada", len(a) == 1)
+    check("e e a certa (Projetos)", "Projetos" in str(a))
+    check("'Fonte' NAO e acusada (chave '1 - Fonte' x nome 'Fonte')",
+          "Fonte" not in str(a))
+    check("'Reunioes' NAO e acusada (chave '3 - Reunioes' x nome 'Reunioes')",
+          u"Reuni\u00f5es" not in str(a))
+    check("base fora do config e VAZIA -> silencio (espera exclusao manual)",
+          CR.conferir_colecoes_fora_do_config(
+              {"Projetos": 0}, {"Projetos": "id-proj"}, declarados, []) == [])
+    check("pasta-mae declarada excluida continua casando por NOME",
+          CR.conferir_colecoes_fora_do_config(
+              {"Financas": 3}, {"Financas": "id-fin"}, declarados, ["Financas"]) == [])
+    # Se o id nao chega (nome sem par no mapa), NAO se conclui que esta declarada:
+    # sem id nao ha como afirmar que a esteira mantem, e o silencio seria conclusao.
+    check("nome sem id conhecido -> acusa (nao presume declarada)",
+          len(CR.conferir_colecoes_fora_do_config(
+              {"Misteriosa": 4}, {}, declarados, [])) == 1)
+
+    print("\n== o catalogo do painel NAO pode falhar calado ==")
+    # O DEFEITO, achado rodando o proprio conferidor em 10/09/2026: a coleta do
+    # catalogo fazia `except Exception: catalogo = None` e seguia. Sem catalogo,
+    # so as colecoes DECLARADAS entram na conta - e colecao_fora_do_config filtra
+    # fora justamente as declaradas. A intersecao fica vazia POR CONSTRUCAO e a
+    # classe devolve ZERO, indistinguivel de "conferi e esta limpo".
+    #
+    # E o D37 pela terceira vez, agora dentro da classe escrita para consertar o
+    # D37. Nao e distracao: e o que um `except` largo FAZ - transforma "falhei" em
+    # "nada encontrado". Por isso a prova mora aqui e nao numa leitura.
+    import json as _json
+    import tempfile
+    import urllib.request as _u
+
+    tmp = tempfile.mkdtemp()
+    os.makedirs(os.path.join(tmp, "_scripts"), exist_ok=True)
+    with open(os.path.join(tmp, "_scripts", "sync_config.json"), "w") as f:
+        _json.dump({"colecoes": {"Produtos": {"id": "abc"}}}, f)
+    os.environ["OPENWEBUI_BASE_URL"] = "http://exemplo.invalido"
+    os.environ["OPENWEBUI_API_KEY"] = "x"
+    original = _u.urlopen
+    try:
+        _u.urlopen = lambda *a, **k: (_ for _ in ()).throw(OSError("recusou"))
+        out, motivo = CR._contagens_do_painel(tmp)
+        check("catalogo indisponivel -> None (nao {} nem zero)", out is None)
+        check("e o motivo aponta o endpoint que falhou",
+              bool(motivo) and "/api/v1/knowledge/" in motivo)
+
+        class _Resp(object):
+            def __init__(self, corpo):
+                self._c = corpo
+
+            def read(self):
+                return self._c
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+        # A OUTRA FORMA da mesma falha: responde 200 com um dict que nao traz
+        # 'items'. Sem esta metade, um endpoint que devolvesse {} passaria e a
+        # classe ficaria cega de novo.
+        _u.urlopen = lambda *a, **k: _Resp(b'{"detail":"nao autorizado"}')
+        out2, motivo2 = CR._contagens_do_painel(tmp)
+        check("catalogo sem 'items' -> None", out2 is None)
+        check("e o motivo diz o que veio no lugar",
+              bool(motivo2) and "dict" in motivo2)
+
+        # PAGINACAO: o endpoint devolve {items,total} e so aceita `page`. Se a
+        # conferencia lesse a primeira pagina e parasse, a colecao fora do config
+        # que estivesse na pagina 2 nunca seria vista - e o relatorio diria
+        # "limpo". E o defeito do PR #66 (count=10 num universo de doze) na porta
+        # do lado. O painel abaixo tem 3 colecoes em 2 paginas.
+        paginas = {
+            1: b'{"items":[{"id":"a","name":"Produtos"},'
+               b'{"id":"b","name":"Fonte"}],"total":3}',
+            2: b'{"items":[{"id":"c","name":"Projetos"}],"total":3}',
+        }
+
+        def _por_pagina(req, *a, **k):
+            url = req.full_url if hasattr(req, "full_url") else str(req)
+            n = 2 if "page=2" in url else 1
+            return _Resp(paginas[n])
+
+        _u.urlopen = _por_pagina
+        out3, motivo3 = CR._contagens_do_painel(tmp)
+        check("paginou ate o total (nao parou na pagina 1)",
+              motivo3 is None and out3 is not None and len(out3[0]) == 3)
+        check("a colecao que so existia na pagina 2 entrou na conta",
+              bool(out3) and "Projetos" in out3[0])
+        check("e o id dela viaja junto (a comparacao e por id)",
+              bool(out3) and out3[1].get("Projetos") == "c")
+
+        # E se a paginacao NAO entregar o que o painel declara, e falha - nao
+        # "achei menos". Concluir 'nada fora do config' sobre catalogo incompleto
+        # e a propria mentira que a classe existe para evitar.
+        _u.urlopen = lambda *a, **k: _Resp(
+            b'{"items":[{"id":"a","name":"Produtos"}],"total":9}')
+        out4, motivo4 = CR._contagens_do_painel(tmp)
+        check("catalogo incompleto (1 de 9) -> None, nao conclusao",
+              out4 is None and bool(motivo4) and "INCOMPLETO" in motivo4)
+    finally:
+        _u.urlopen = original
+        os.environ.pop("OPENWEBUI_BASE_URL", None)
+        os.environ.pop("OPENWEBUI_API_KEY", None)
     print("\n== PUBLICADO x REPOSITORIO (doc 14) ==")
     # A MAIOR LACUNA da varredura de cobertura: pipe e tools vao a producao por
     # API, manualmente - mergear na main NAO publica -, e nada comparava os dois
