@@ -242,6 +242,171 @@ def conferir_bases_vazias(contagens, devem_ficar_vazias):
     return achados
 
 
+# ---------------------------------------------------------------------------
+# PUBLICADO x REPOSITORIO  (desenho em _nidum_docs/14_Conferencia_do_Publicado.md)
+# ---------------------------------------------------------------------------
+# O pipe e as tools vao para producao POR API, MANUALMENTE. Mergear na main NAO
+# publica. Logo o que esta no ar pode ser qualquer versao - e ate hoje NADA
+# comparava o painel com o repositorio.
+#
+# A varredura de cobertura (doc 11) apontou isto como a maior lacuna: o coracao
+# do produto era o unico objeto que ninguem conferia. E a Fase E torna a lacuna
+# critica em vez de apenas indesejavel - durante o corte vao coexistir DUAS
+# implementacoes do mesmo produto.
+#
+# NAO BLOQUEIA. Divergencia entre painel e repo e estado NORMAL entre o merge e
+# o publish. O que nao e normal e ela durar sem ninguem saber.
+
+_PUBLICADOS = (
+    # (tipo, id no painel, caminho no repo)
+    ("funcao", "chatnd", os.path.join("_nidum_tools", "chatnd.py")),
+    ("tool", "gerador_de_arquivos_nidum",
+     os.path.join("_nidum_tools", "gerador_de_arquivos_nidum.py")),
+    ("tool", "relatorio_ambientes_nidum",
+     os.path.join("_nidum_tools", "relatorio_ambientes_nidum.py")),
+    ("tool", "sharepoint_nidum",
+     os.path.join("_nidum_tools", "sharepoint_nidum.py")),
+)
+
+_RE_VERSAO = re.compile(r"^\s*version:\s*([0-9]+(?:\.[0-9]+)*)", re.M)
+
+
+def _normalizar_fonte(texto):
+    """Normaliza o SUFICIENTE, e nao mais que isso.
+
+    NORMALIZA: \r\n -> \n, espaco a direita de cada linha, linhas vazias no fim.
+    NAO NORMALIZA: indentacao, ordem, comentarios, espacos internos.
+
+    A fronteira nao e arbitraria. Comparar bytes crus produziria divergencia
+    falsa toda vez (fim de linha, espaco sobrando) e o alarme viraria ruido fixo
+    - que e como um alarme morre (D53). Normalizar demais esconderia mudanca
+    real: em Python a indentacao E semantica, e comentario divergente e
+    justamente o que denuncia um hotfix feito direto no painel.
+    """
+    t = (texto or "").replace("\r\n", "\n").replace("\r", "\n")
+    return "\n".join(l.rstrip() for l in t.split("\n")).rstrip("\n")
+
+
+def _versao_de(fonte):
+    m = _RE_VERSAO.search(fonte or "")
+    return m.group(1) if m else ""
+
+
+def _publicado_do_painel(tipo, ident, _cache={}):
+    """(fonte, motivo). fonte=None significa NAO CONSEGUI OLHAR - nunca 'igual'.
+
+    O ENDPOINT DAS TOOLS NAO E O QUE PARECE, e este e o achado que justificou
+    desenhar antes de codar:
+
+        funcoes:  GET /api/v1/functions/id/{id}  -> FunctionModel, TEM `content`
+        tools:    GET /api/v1/tools/id/{id}      -> ToolAccessResponse, SEM content
+                  GET /api/v1/tools/export       -> list[ToolModel], TEM `content`
+
+    Dois objetos que parecem irmaos, com formas diferentes. Descobrir isso no
+    meio da implementacao custaria uma tarde.
+    """
+    base = os.environ.get("OPENWEBUI_BASE_URL")
+    chave = os.environ.get("OPENWEBUI_API_KEY")
+    if not base or not chave:
+        return None, "faltam OPENWEBUI_BASE_URL/OPENWEBUI_API_KEY neste ambiente"
+    import urllib.request
+
+    def _pegar(caminho):
+        req = urllib.request.Request(base.rstrip("/") + caminho,
+                                     headers={"Authorization": "Bearer " + chave})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return json.loads(r.read().decode())
+
+    if tipo == "funcao":
+        try:
+            d = _pegar("/api/v1/functions/id/" + ident)
+        except Exception as e:
+            return None, ("a base nao respondeu a /api/v1/functions/id/%s (%s)"
+                          % (ident, str(e)[:60]))
+        if not isinstance(d, dict):
+            return None, "/api/v1/functions/id/%s nao devolveu objeto" % ident
+        if not d.get("content"):
+            return None, "a funcao %r existe no painel mas veio sem `content`" % ident
+        return d["content"], None
+
+    # TOOLS: uma chamada so para todas, guardada em cache - o /export devolve a
+    # lista inteira, e pedir de novo por tool seria pagar N vezes pela mesma
+    # resposta.
+    if "tools" not in _cache:
+        try:
+            _cache["tools"] = _pegar("/api/v1/tools/export")
+        except Exception as e:
+            _cache["tools"] = e
+    d = _cache["tools"]
+    if isinstance(d, Exception):
+        return None, "a base nao respondeu a /api/v1/tools/export (%s)" % str(d)[:60]
+    if not isinstance(d, list):
+        return None, "/api/v1/tools/export nao devolveu lista (veio %s)" % type(d).__name__
+    for t in d:
+        if isinstance(t, dict) and str(t.get("id") or "").strip() == ident:
+            if not t.get("content"):
+                return None, "a tool %r esta no export mas veio sem `content`" % ident
+            return t["content"], None
+    return "", None                      # nao publicada: string vazia, nao None
+
+
+def conferir_publicado(plataforma, publicados=None, leitor=None):
+    """Painel x repo, para cada artefato publicado por API.
+
+    TRES COMPARACOES EM ORDEM, e a ordem importa porque a primeira que diverge
+    ja responde: existe -> versao -> corpo.
+
+    A versao sozinha nao basta (alguem publica sem subir o numero) e o corpo
+    sozinho tambem nao (dizer "divergente" sem dizer de QUANTAS versoes nao
+    ajuda a decidir).
+
+    NAO IMPRIME O CODIGO em nenhum achado: e fonte com valve e chave dentro.
+    """
+    ler = leitor or _publicado_do_painel
+    achados = []
+    for tipo, ident, rel in (publicados or _PUBLICADOS):
+        caminho = os.path.join(plataforma, rel)
+        no_repo = _ler(caminho)
+        if not no_repo:
+            continue                     # artefato que nao existe no repo: nao e desta classe
+        fonte, motivo = ler(tipo, ident)
+        if fonte is None:
+            # NAO CONSEGUI OLHAR. Este estado e obrigatorio e nao e detalhe: uma
+            # classe que nao pode conferir e diz "nada encontrado" e a forma mais
+            # silenciosa de um conferidor mentir - o /api/v1/models/ passou dias
+            # assim (D57).
+            achados.append(_achado(
+                "nao_conferido",
+                "publicado_divergente NAO foi conferida para %s %r: %s"
+                % (tipo, ident, motivo),
+                "ambiente de execucao",
+                "classe nao conferida contada como 'nada encontrado' e a forma "
+                "mais silenciosa de um conferidor mentir"))
+            continue
+        if fonte == "":
+            achados.append(_achado(
+                "publicado_ausente",
+                "%s %r existe no repo e NAO esta publicada no painel" % (tipo, ident),
+                rel,
+                "codigo que ninguem publicou nao roda - e quem le o repo supoe "
+                "que roda"))
+            continue
+        a, b = _normalizar_fonte(fonte), _normalizar_fonte(no_repo)
+        if a == b:
+            continue
+        v_painel, v_repo = _versao_de(fonte), _versao_de(no_repo)
+        dif = sum(1 for x, y in zip(a.split("\n"), b.split("\n")) if x != y)
+        dif += abs(len(a.split("\n")) - len(b.split("\n")))
+        achados.append(_achado(
+            "publicado_divergente",
+            "%s %r: painel version=%s x repo version=%s (%d linha(s) diferentes)"
+            % (tipo, ident, v_painel or "?", v_repo or "?", dif),
+            rel,
+            "o que roda nao e o que esta escrito; todo diagnostico do produto "
+            "parte da suposicao contraria"))
+    return achados
+
+
 def codigo_de_saida(achados):
     """2 = achou (RESULTADO), 0 = limpo, 1 fica reservado para FALHA do script.
 
@@ -605,6 +770,11 @@ def conferir(plataforma=None, esteira=None):
             "silenciosa de um conferidor mentir"))
     else:
         achados.extend(conferir_bases_vazias(contagens, _bases_que_ficam_vazias(esteira)))
+
+    # I - o que esta PUBLICADO x o que esta no repo (doc 14). Pipe e tools vao por
+    # API, manualmente: mergear na main nao publica, e ate hoje nada comparava os
+    # dois lados. Nao bloqueia - divergencia e estado normal entre merge e publish.
+    achados.extend(_seguro(conferir_publicado, plataforma) or [])
 
     # E - fixture com caminho de pasta inexistente
     pastas = _pastas_do_repo(esteira)
