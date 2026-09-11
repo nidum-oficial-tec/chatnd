@@ -14,48 +14,31 @@ descartado com o motivo escrito.
 
 ---
 
+## Item ENCERRADO — o #2 saiu da lista
+
+**#2 · Wrappers invisíveis — ITEM ENCERRADO, não é mais da lista (11/09/2026).**
+
+> Entrou aqui como **bloqueador técnico** e atravessou a semana assim. Investigado, virou
+> nada — em três camadas, e nenhuma era o que parecia:
+>
+> 1. **O bloqueador era imaginado.** Um preset já aparece no seletor com o **nome dele**;
+>    esconder o modelo base é um **toggle** (`is_active` numa entrada de override, e
+>    `utils/models.py` faz `models.remove(model)`). Configuração, não código.
+> 2. **Havia uma violação real ao lado, invisível.** `info.base_model_id` e `owned_by`
+>    viajam no payload de `/api/models` para **qualquer usuário autenticado** — e isso já
+>    valia **com os wrappers de hoje**. Confirmado em produção pelo devtools.
+> 3. **A violação, examinada, não era violação.** Vaza o **modelo**, nunca a **chave**;
+>    todo mundo com conta é de dentro; e a regra protege o **texto das respostas**, não o
+>    payload de uma API interna. **A regra é que estava mal escrita** — reescrita com
+>    escopo explícito no `CLAUDE.md`. Ver **D61**.
+>
+> **Consequência: o #2 sai da lista.** Não é bloqueador e não é item.
+
+**O prazo do corte passa a ser governado por dois itens, e só:** o **#6** (fechar os 28%
+de ambição de deck, que já tem número) e o **#13** (canal do projeto, que carrega a
+pendência D20 junto).
+
 ## Bloqueadores — sem isto, o corte não acontece
-
-**#2 · Wrappers invisíveis.** O usuário vê **uma IA só**. Sem os wrappers, o seletor
-mostra o nome do modelo — e "nunca revelar qual LLM/provedor está por trás" é regra
-inviolável do projeto, não preferência. **É o único item cuja ausência viola uma regra
-escrita.**
-
-> **RESPOSTA DE 11/09 (pedido do Davi: configuração, código, ou impossível?):
-> é CONFIGURAÇÃO, e isso muda o prazo do corte.**
->
-> Lendo `utils/models.py`: um preset já aparece no seletor com o **nome dele**
-> (`custom_model.name`), nunca com o do modelo base. O que revela o provedor é o
-> **modelo base estar listado como entrada própria** — e ele pode ser removido da
-> lista: basta uma entrada de override para ele (mesmo id, `base_model_id = None`)
-> com `is_active = False`, e o código faz `models.remove(model)`. O painel expõe
-> isso como o toggle de ativo/inativo do modelo.
->
-> **Duas ressalvas honestas.** (a) O `owned_by`/`connection_type` do modelo base
-> continua viajando no payload do preset — o seletor os usa só para escolher
-> **ícone** (`ollama`, `external`), não texto, mas quem abrir a API ou o devtools
-> vê. Esconder do seletor e esconder de quem procura são barras diferentes. (b)
-> Conferi **lendo o código**, não testando no painel — o teste é abrir o seletor
-> com o base desativado e confirmar.
->
-> **Consequência:** o #2 deixa de ser bloqueador de engenharia e vira um toggle por
-> modelo base. O prazo do corte passa a ser governado pelo **#6** (fechar os 28% de
-> ambição de deck) e pelo **#13** (canal do projeto).
->
-> **E o registro que importa para quem ler depois (Davi, 11/09): o obstáculo era
-> IMAGINADO, não real.** O #2 entrou na lista como bloqueador técnico e atravessou a
-> semana como tal — quando a resposta era um toggle no painel. **O corte não tem
-> bloqueador de engenharia; tem decisão de produto.**
->
-> Quem repetir esse exercício: antes de classificar um item como bloqueador, gaste os
-> vinte minutos de ler como o mecanismo funciona hoje. Um item na coluna errada não
-> atrasa só a si mesmo — reordena tudo o que vem depois dele.
->
-> **E a ressalva virou achado próprio, não pendência desta fase.** O `owned_by` e o
-> `info.base_model_id` viajam no payload de `/api/models` para **qualquer usuário
-> autenticado** — e isso vale **também para os wrappers de hoje**. Os wrappers escondem
-> do **seletor**, não da **API**. Ver **D61**: é assunto de agora, e a Fase E não muda
-> nada nele.
 
 **#6 · Geração de arquivos.** Uso diário e uma das quatro rotas. A Fase A provou que a
 tool **funciona no preset** — o que falta é medido e nomeado: **ambição de deck a 28%**
