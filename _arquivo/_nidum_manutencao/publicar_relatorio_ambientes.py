@@ -1,4 +1,26 @@
 # -*- coding: ascii -*-
+# ============================================================================
+# ARQUIVADO em 11/09/2026. NAO USE. Mantido porque nada se deleta (regra da casa).
+#
+# POR QUE SAIU: e um duplicado HARDCODED do publicar_tool.py - mesmos endpoints
+# (/api/v1/tools/create e /tools/id/{id}/update), mesma forma de payload, so que
+# com id, nome e descricao fixos AQUI DENTRO em vez de lidos do cabecalho do
+# arquivo publicado. O generico faz o mesmo e le do repo, que e onde a verdade
+# deve morar.
+#
+# A DIVERGENCIA QUE ELE DEIXOU, e ela e o motivo de este aviso existir (D65):
+#
+#     este script manda     "Relatorio de Ambientes (modelo visual)"
+#     o arquivo no repo diz "Relatorio de Ambientes Nidum"   (cabecalho title:)
+#
+# Quem publicar `relatorio_ambientes_nidum` pelo caminho de hoje (o workflow do
+# Actions, que le o cabecalho) RENOMEIA a tool no painel. E reversivel - mas
+# "cosmetico e reversivel" so e verdade para quem sabe que aconteceu, e por isso
+# esta escrito em vez de descoberto.
+#
+# SUBSTITUTO: py _nidum_manutencao/publicar_tool.py _nidum_tools/relatorio_ambientes_nidum.py
+#             ou o workflow "Publicar pipe/tools (manual)", alvo relatorio_ambientes_nidum.
+# ============================================================================
 """
 Publica (ou atualiza) a tool 'relatorio_ambientes_nidum' na imagem VIVA do ChatND.
 
