@@ -774,7 +774,22 @@ def conferir(plataforma=None, esteira=None):
     # I - o que esta PUBLICADO x o que esta no repo (doc 14). Pipe e tools vao por
     # API, manualmente: mergear na main nao publica, e ate hoje nada comparava os
     # dois lados. Nao bloqueia - divergencia e estado normal entre merge e publish.
-    achados.extend(_seguro(conferir_publicado, plataforma) or [])
+    pub = _seguro(conferir_publicado, plataforma)
+    if pub is None:
+        # `_seguro` devolve None quando a coleta QUEBRA. Escrever
+        # `_seguro(...) or []` seria transformar "explodiu" em "nada encontrado" -
+        # o defeito que este arquivo inteiro existe para pegar, cometido na
+        # chamada da classe mais nova. Todos os outros chamadores tratam o None
+        # explicitamente; este nao tratava, e por isso a primeira rodada em CI
+        # voltou silenciosa em vez de dizer o que houve.
+        achados.append(_achado(
+            "nao_conferido",
+            "publicado_divergente NAO foi conferida: a coleta quebrou",
+            "ambiente de execucao",
+            "classe nao conferida contada como 'nada encontrado' e a forma mais "
+            "silenciosa de um conferidor mentir"))
+    else:
+        achados.extend(pub)
 
     # E - fixture com caminho de pasta inexistente
     pastas = _pastas_do_repo(esteira)
