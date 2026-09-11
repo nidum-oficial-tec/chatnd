@@ -41,6 +41,21 @@ escrita.**
 > **Consequência:** o #2 deixa de ser bloqueador de engenharia e vira um toggle por
 > modelo base. O prazo do corte passa a ser governado pelo **#6** (fechar os 28% de
 > ambição de deck) e pelo **#13** (canal do projeto).
+>
+> **E o registro que importa para quem ler depois (Davi, 11/09): o obstáculo era
+> IMAGINADO, não real.** O #2 entrou na lista como bloqueador técnico e atravessou a
+> semana como tal — quando a resposta era um toggle no painel. **O corte não tem
+> bloqueador de engenharia; tem decisão de produto.**
+>
+> Quem repetir esse exercício: antes de classificar um item como bloqueador, gaste os
+> vinte minutos de ler como o mecanismo funciona hoje. Um item na coluna errada não
+> atrasa só a si mesmo — reordena tudo o que vem depois dele.
+>
+> **E a ressalva virou achado próprio, não pendência desta fase.** O `owned_by` e o
+> `info.base_model_id` viajam no payload de `/api/models` para **qualquer usuário
+> autenticado** — e isso vale **também para os wrappers de hoje**. Os wrappers escondem
+> do **seletor**, não da **API**. Ver **D61**: é assunto de agora, e a Fase E não muda
+> nada nele.
 
 **#6 · Geração de arquivos.** Uso diário e uma das quatro rotas. A Fase A provou que a
 tool **funciona no preset** — o que falta é medido e nomeado: **ambição de deck a 28%**
