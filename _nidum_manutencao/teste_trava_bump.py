@@ -8,7 +8,7 @@ git - e essa parte falha ruidosamente (exit 3), nao silenciosamente.
 
 import sys
 
-from trava_bump import julgar, versao_do_texto
+from trava_bump import PUBLICADOS, julgar, versao_do_texto
 
 
 CAB = 'title: X\nversion: %s\ndescription: y\n"""\n'
@@ -81,6 +81,24 @@ def main():
     #    diferente.
     checa("version com espacos", versao_do_texto("  Version :  2.8.2 \n") == "2.8.2")
     checa("sem version = string vazia", versao_do_texto("nada aqui") == "")
+
+    # 11. AS DUAS LISTAS TEM DE CONCORDAR. `trava_bump.PUBLICADOS` e
+    #     `conferir_registros._PUBLICADOS` falam dos mesmos arquivos: a trava
+    #     exige bump neles, o conferidor confere o publicado deles. Se alguem
+    #     acrescentar um publicado em so uma das duas, a falha e silenciosa -
+    #     um arquivo que sobe para producao sem nenhuma das duas redes, ou com
+    #     metade. Nao unifico (a trava se prova sem dependencia nenhuma);
+    #     VERIFICO, que e o que pega o erro sem criar acoplamento.
+    try:
+        from conferir_registros import _PUBLICADOS
+        do_conferidor = set(rel for _, _, rel in _PUBLICADOS)
+        checa("as duas listas de publicados concordam",
+              do_conferidor == set(PUBLICADOS),
+              do_conferidor.symmetric_difference(PUBLICADOS))
+    except ImportError as e:
+        # Nao vira "passou calado": se o conferidor nao carrega, a comparacao
+        # nao aconteceu e quem le precisa saber disso.
+        checa("consegui comparar com a lista do conferidor", False, e)
 
     print("")
     if FALHAS:
