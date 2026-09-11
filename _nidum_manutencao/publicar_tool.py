@@ -9,8 +9,14 @@ COMO USAR (no seu terminal):
   1) variaveis de ambiente:
        $env:NIDUM_URL   = "https://chatnd.nidumbrasil.com.br"
        $env:NIDUM_TOKEN = "SEU_TOKEN_ADMIN"
-  2) rode passando o caminho do .py:
+  2) SIMULE primeiro (nao escreve nada, mostra o tamanho da mudanca):
+       py _nidum_manutencao/publicar_tool.py _nidum_tools/sharepoint_nidum.py --dry-run
+  3) publique:
        py _nidum_manutencao/publicar_tool.py _nidum_tools/sharepoint_nidum.py
+
+O JEITO PREFERIDO NAO E ESTE: e o workflow "Publicar pipe/tools" no GitHub
+Actions, que sobe o codigo direto do repositorio e carimba o sha sozinho. Rodar
+daqui continua funcionando; o publish so deixa carimbo LOCAL, de proposito.
 
 Se a tool ja existir, atualiza (nao duplica). So-ASCII.
 """
@@ -21,6 +27,22 @@ import re
 import sys
 import urllib.error
 import urllib.request
+
+# A simulacao e o carimbo de origem moram no modulo irmao (ver o cabecalho dele).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _publicar_comum import carimbo_de_origem, descricao_com_carimbo, simular
+
+
+def _argumentos(argv):
+    """Separa a flag do caminho. --dry-run em qualquer posicao.
+
+    Feito a mao em vez de argparse para nao mudar o jeito de chamar que ja esta
+    escrito no topo do arquivo e na cabeca de quem usa: o caminho continua sendo
+    um posicional solto.
+    """
+    seco = any(a in ("--dry-run", "--dry_run", "--simular") for a in argv)
+    resto = [a for a in argv if not a.startswith("--")]
+    return seco, resto
 
 
 def _http(method, url, token, payload=None):
@@ -48,10 +70,12 @@ def _cabecalho(campo, texto):
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("USO: py _nidum_manutencao/publicar_tool.py <caminho-do-arquivo.py>")
+    seco, posicionais = _argumentos(sys.argv[1:])
+    if not posicionais:
+        print("USO: py _nidum_manutencao/publicar_tool.py <caminho-do-arquivo.py> "
+              "[--dry-run]")
         sys.exit(1)
-    code_path = sys.argv[1]
+    code_path = posicionais[0]
     if not os.path.isfile(code_path):
         print("ERRO: arquivo nao encontrado: %s" % code_path)
         sys.exit(1)
@@ -78,6 +102,13 @@ def main():
     desc = _cabecalho("description", content)[:400] or name
     print("Publicando tool id=%s (%d bytes)..." % (tool_id, len(content)))
 
+    if seco:
+        sys.exit(simular(_http, base, token, "tool", tool_id, content,
+                         _cabecalho("version", content),
+                         lambda t: _cabecalho("version", t)))
+
+    # O CARIMBO VAI NA DESCRICAO, NUNCA NO CONTEUDO - ver publicar_pipe.py.
+    desc = descricao_com_carimbo(desc, carimbo_de_origem())
     form = {"id": tool_id, "name": name, "content": content, "meta": {"description": desc}}
     st, body = _http("POST", "%s/api/v1/tools/create" % base, token, form)
     if st != 200:
@@ -100,6 +131,7 @@ def main():
 
     print("")
     print("PRONTO. Tool publicada. Configure as Valves e acople ao motor.")
+    print("Origem registrada: %s" % carimbo_de_origem())
 
 
 if __name__ == "__main__":
