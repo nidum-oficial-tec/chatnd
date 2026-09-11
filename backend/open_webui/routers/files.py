@@ -21,6 +21,7 @@ from fastapi import (
     status,
 )
 from fastapi.responses import FileResponse, StreamingResponse
+from starlette.background import BackgroundTask
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, STORAGE_LOCAL_CACHE, STORAGE_PROVIDER, UPLOAD_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.internal.db import get_async_db_context, get_async_session
@@ -40,7 +41,7 @@ from open_webui.models.users import Users
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.audio import transcribe
 from open_webui.routers.retrieval import ProcessFileForm, process_file
-from open_webui.storage.provider import Storage
+from open_webui.storage.provider import Storage, cleanup_local_cache
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.misc import strict_match_mime_type
 from pydantic import BaseModel
@@ -72,8 +73,13 @@ def _is_text_file(file_path: str, chunk_size: int = 8192) -> bool:
     """
     try:
         resolved = Storage.get_file(file_path)
-        with open(resolved, 'rb') as f:
-            chunk = f.read(chunk_size)
+        try:
+            with open(resolved, 'rb') as f:
+                chunk = f.read(chunk_size)
+        finally:
+            # Baixou do S3 so para farejar os primeiros bytes. A copia inteira
+            # ficava no volume por causa de uma leitura de 1 KB.
+            cleanup_local_cache(resolved)
         if not chunk:
             return False
         # Null bytes are a strong indicator of binary content
@@ -91,18 +97,10 @@ def _is_text_file(file_path: str, chunk_size: int = 8192) -> bool:
         return False
 
 
-def _cleanup_local_cache(file_path: str) -> None:
-    """Remove the local cached copy of a cloud-stored file after processing."""
-    if STORAGE_LOCAL_CACHE or STORAGE_PROVIDER == 'local':
-        return
-    try:
-        local_filename = os.path.basename(file_path)
-        local_path = os.path.join(UPLOAD_DIR, local_filename)
-        if os.path.isfile(local_path):
-            os.remove(local_path)
-            log.debug(f'Cleaned up local cache: {local_path}')
-    except OSError as e:
-        log.warning(f'Failed to clean up local cache for {file_path}: {e}')
+# A definicao mudou para storage/provider.py - e sobre armazenamento, nao sobre
+# rota, e agora e chamada de quatro lugares em tres modulos. O nome local fica
+# como apelido para nao mexer no unico ponto que ja a chamava.
+_cleanup_local_cache = cleanup_local_cache
 
 
 async def process_uploaded_file(
@@ -128,12 +126,17 @@ async def process_uploaded_file(
             if content_type and strict_match_mime_type(stt_supported, content_type):
                 # Audio / STT-supported files → transcribe then index
                 file_path_processed = await asyncio.to_thread(Storage.get_file, file_path)
-                result = await transcribe(
-                    request,
-                    file_path_processed,
-                    file_metadata,
-                    user,
-                )
+                try:
+                    result = await transcribe(
+                        request,
+                        file_path_processed,
+                        file_metadata,
+                        user,
+                    )
+                finally:
+                    # Audio e o pior caso de volume: arquivo grande, lido uma vez
+                    # pelo Whisper e nunca mais.
+                    cleanup_local_cache(file_path_processed)
                 await process_file(
                     request,
                     ProcessFileForm(file_id=file_item.id, content=result.get('text', '')),
@@ -688,7 +691,13 @@ async def get_file_content_by_id(
                     elif content_type != 'text/plain':
                         headers['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
 
-                return FileResponse(file_path, headers=headers, media_type=content_type)
+                # O corpo so e lido DEPOIS que este handler retorna, entao a
+                # limpeza tem de ser BackgroundTask. Apagar antes do return
+                # serviria um download vazio - o pior desfecho possivel, que
+                # e parecer que funcionou.
+                return FileResponse(
+                    file_path, headers=headers, media_type=content_type,
+                    background=BackgroundTask(cleanup_local_cache, str(file_path)))
 
             else:
                 raise HTTPException(
@@ -738,7 +747,13 @@ async def get_html_file_content_by_id(
             # Check if the file already exists in the cache
             if file_path.is_file():
                 log.info(f'file_path: {file_path}')
-                return FileResponse(file_path)
+                # O corpo so e lido DEPOIS que este handler retorna, entao a
+                # limpeza tem de ser BackgroundTask. Apagar antes do return
+                # serviria um download vazio - o pior desfecho possivel, que
+                # e parecer que funcionou.
+                return FileResponse(
+                    file_path,
+                    background=BackgroundTask(cleanup_local_cache, str(file_path)))
             else:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -786,7 +801,13 @@ async def get_file_content_by_id(
 
             # Check if the file already exists in the cache
             if file_path.is_file():
-                return FileResponse(file_path, headers=headers)
+                # O corpo so e lido DEPOIS que este handler retorna, entao a
+                # limpeza tem de ser BackgroundTask. Apagar antes do return
+                # serviria um download vazio - o pior desfecho possivel, que
+                # e parecer que funcionou.
+                return FileResponse(
+                    file_path, headers=headers,
+                    background=BackgroundTask(cleanup_local_cache, str(file_path)))
             else:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,

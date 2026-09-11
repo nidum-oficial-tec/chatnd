@@ -108,7 +108,7 @@ from open_webui.retrieval.web.yacy import search_yacy
 from open_webui.retrieval.web.yandex import search_yandex
 from open_webui.retrieval.web.ydc import search_youcom
 from open_webui.retrieval.web.linkup import search_linkup
-from open_webui.storage.provider import Storage
+from open_webui.storage.provider import Storage, cleanup_local_cache
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -1655,7 +1655,14 @@ async def process_file(
                     file_path = await asyncio.to_thread(Storage.get_file, file_path)
                     loader = build_loader_from_config(request)
                     loader.user = user
-                    docs = await loader.aload(file.filename, file.meta.get('content_type'), file_path)
+                    try:
+                        docs = await loader.aload(file.filename, file.meta.get('content_type'), file_path)
+                    finally:
+                        # O loader ja leu: a copia baixada do S3 nao serve a mais
+                        # ninguem. `finally` porque loader que levanta tambem
+                        # deixa a copia para tras - e falha e justamente quando
+                        # ninguem volta para limpar.
+                        cleanup_local_cache(file_path)
 
                     docs = [
                         Document(
