@@ -215,7 +215,20 @@ conserto - a 1.33.0 fez, e nao mudou nada.
 
 - `_nidum_tools/*.py` (pipe e tool): APENAS ASCII (sem bullets unicode, travessoes
   ou emojis). Validar com `python -m py_compile`.
-- Nunca revelar qual LLM/provedor esta por tras.
+- **Nunca revelar qual LLM/provedor esta por tras - NO TEXTO DAS RESPOSTAS.** O
+  ChatND nao diz "eu sou o Claude" quando perguntam, nao cita o provedor, e nao
+  deixa o nome do modelo aparecer em nenhuma saida que o usuario le: resposta,
+  arquivo gerado, mensagem de erro, log mostrado na tela.
+  **O escopo E O TEXTO, e nao o payload das APIs internas.** `/api/models` devolve
+  `info.base_model_id` e `owned_by` para qualquer usuario autenticado, e isso
+  vale HOJE, com os wrappers - conferido em producao em 11/09/2026 pelo devtools.
+  **Foi examinado e decidido que NAO e problema** (D61): vaza o MODELO, nunca a
+  chave, e todo mundo com conta e de dentro.
+  **Por que o escopo esta escrito, e nao subentendido:** a frase antiga cobria
+  duas coisas diferentes - a experiencia do produto e a superficie tecnica - e,
+  lida ao pe da letra, transformava um fato conhecido em violacao permanente.
+  Regra que nao diz onde comeca e onde termina vira alarme falso ou licenca,
+  conforme quem le.
 - Nunca expor chaves/segredos no chat, log ou commit.
 - Pipe/tool sao publicados via API do Open WebUI (`/api/v1/functions/id/chatnd/update`
   e `/api/v1/tools/id/gerador_de_arquivos_nidum/update`), nao por deploy de repo.

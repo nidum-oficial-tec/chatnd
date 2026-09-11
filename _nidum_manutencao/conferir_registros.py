@@ -302,6 +302,213 @@ def conferir_colecoes_fora_do_config(contagens, ids_por_nome, ids_declarados,
             "ve e busca nela - o conteudo dela envelhece sem que nada acuse"))
     return achados
 
+# ---------------------------------------------------------------------------
+# PUBLICADO x REPOSITORIO  (desenho em _nidum_docs/14_Conferencia_do_Publicado.md)
+# ---------------------------------------------------------------------------
+# O pipe e as tools vao para producao POR API, MANUALMENTE. Mergear na main NAO
+# publica. Logo o que esta no ar pode ser qualquer versao - e ate hoje NADA
+# comparava o painel com o repositorio.
+#
+# A varredura de cobertura (doc 11) apontou isto como a maior lacuna: o coracao
+# do produto era o unico objeto que ninguem conferia. E a Fase E torna a lacuna
+# critica em vez de apenas indesejavel - durante o corte vao coexistir DUAS
+# implementacoes do mesmo produto.
+#
+# NAO BLOQUEIA. Divergencia entre painel e repo e estado NORMAL entre o merge e
+# o publish. O que nao e normal e ela durar sem ninguem saber.
+
+_PUBLICADOS = (
+    # (tipo, id no painel, caminho no repo)
+    ("funcao", "chatnd", os.path.join("_nidum_tools", "chatnd.py")),
+    ("tool", "gerador_de_arquivos_nidum",
+     os.path.join("_nidum_tools", "gerador_de_arquivos_nidum.py")),
+    ("tool", "relatorio_ambientes_nidum",
+     os.path.join("_nidum_tools", "relatorio_ambientes_nidum.py")),
+    ("tool", "sharepoint_nidum",
+     os.path.join("_nidum_tools", "sharepoint_nidum.py")),
+)
+
+_RE_VERSAO = re.compile(r"^\s*version:\s*([0-9]+(?:\.[0-9]+)*)", re.M)
+
+
+def _normalizar_fonte(texto):
+    """Normaliza o SUFICIENTE, e nao mais que isso.
+
+    NORMALIZA: \r\n -> \n, espaco a direita de cada linha, linhas vazias no fim.
+    NAO NORMALIZA: indentacao, ordem, comentarios, espacos internos.
+
+    A fronteira nao e arbitraria. Comparar bytes crus produziria divergencia
+    falsa toda vez (fim de linha, espaco sobrando) e o alarme viraria ruido fixo
+    - que e como um alarme morre (D53). Normalizar demais esconderia mudanca
+    real: em Python a indentacao E semantica, e comentario divergente e
+    justamente o que denuncia um hotfix feito direto no painel.
+    """
+    t = (texto or "").replace("\r\n", "\n").replace("\r", "\n")
+    return "\n".join(l.rstrip() for l in t.split("\n")).rstrip("\n")
+
+
+def _versao_de(fonte):
+    m = _RE_VERSAO.search(fonte or "")
+    return m.group(1) if m else ""
+
+
+def _publicado_do_painel(tipo, ident, _cache={}):
+    """(fonte, motivo). fonte=None significa NAO CONSEGUI OLHAR - nunca 'igual'.
+
+    O ENDPOINT DAS TOOLS NAO E O QUE PARECE, e este e o achado que justificou
+    desenhar antes de codar:
+
+        funcoes:  GET /api/v1/functions/id/{id}  -> FunctionModel, TEM `content`
+        tools:    GET /api/v1/tools/id/{id}      -> ToolAccessResponse, SEM content
+                  GET /api/v1/tools/export       -> list[ToolModel], TEM `content`
+
+    Dois objetos que parecem irmaos, com formas diferentes. Descobrir isso no
+    meio da implementacao custaria uma tarde.
+    """
+    base = os.environ.get("OPENWEBUI_BASE_URL")
+    chave = os.environ.get("OPENWEBUI_API_KEY")
+    if not base or not chave:
+        return None, "faltam OPENWEBUI_BASE_URL/OPENWEBUI_API_KEY neste ambiente"
+    import urllib.request
+
+    def _pegar(caminho):
+        req = urllib.request.Request(base.rstrip("/") + caminho,
+                                     headers={"Authorization": "Bearer " + chave})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return json.loads(r.read().decode())
+
+    if tipo == "funcao":
+        try:
+            d = _pegar("/api/v1/functions/id/" + ident)
+        except Exception as e:
+            return None, ("a base nao respondeu a /api/v1/functions/id/%s (%s)"
+                          % (ident, str(e)[:60]))
+        if not isinstance(d, dict):
+            return None, "/api/v1/functions/id/%s nao devolveu objeto" % ident
+        if not d.get("content"):
+            return None, "a funcao %r existe no painel mas veio sem `content`" % ident
+        return d["content"], None
+
+    # TOOLS: uma chamada so para todas, guardada em cache - o /export devolve a
+    # lista inteira, e pedir de novo por tool seria pagar N vezes pela mesma
+    # resposta.
+    if "tools" not in _cache:
+        try:
+            _cache["tools"] = _pegar("/api/v1/tools/export")
+        except Exception as e:
+            _cache["tools"] = e
+    d = _cache["tools"]
+    if isinstance(d, Exception):
+        return None, "a base nao respondeu a /api/v1/tools/export (%s)" % str(d)[:60]
+    if not isinstance(d, list):
+        return None, "/api/v1/tools/export nao devolveu lista (veio %s)" % type(d).__name__
+    for t in d:
+        if isinstance(t, dict) and str(t.get("id") or "").strip() == ident:
+            if not t.get("content"):
+                return None, "a tool %r esta no export mas veio sem `content`" % ident
+            return t["content"], None
+    return "", None                      # nao publicada: string vazia, nao None
+
+
+def _tamanho_da_diferenca(a, b):
+    """(linhas realmente diferentes, numero da 1a divergencia). PURA.
+
+    POR QUE NAO E UM `zip` POSICAO A POSICAO - e a primeira versao desta funcao
+    era exatamente isso. Com UMA linha inserida no topo, todas as seguintes ficam
+    deslocadas e contam como diferentes. A primeira rodada em producao devolveu
+    "5655 linhas diferentes" num arquivo de 6559, e "2686" num de 2711 - numeros
+    que mandam republicar tudo quando a verdade pode ser uma linha.
+
+    NUMERO INFLADO E PIOR QUE NUMERO AUSENTE: a ausencia manda medir; o inflado
+    manda agir errado, e com a confianca de quem tem um dado na mao. E o
+    conteudo que parece conteudo (D54) na forma de metrica.
+
+    `difflib` alinha os blocos iguais antes de contar, entao o numero passa a ser
+    o que uma pessoa chamaria de diferenca. E a 1a linha divergente diz se a
+    mudanca esta no cabecalho (version, docstring) ou no corpo.
+    """
+    import difflib
+    la, lb = a.split(chr(10)), b.split(chr(10))
+    dif, primeira = 0, None
+    for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, la, lb).get_opcodes():
+        if tag == "equal":
+            continue
+        dif += max(i2 - i1, j2 - j1)
+        if primeira is None:
+            primeira = min(i1, j1) + 1
+    return dif, primeira
+
+
+def conferir_publicado(plataforma, publicados=None, leitor=None):
+    """Painel x repo, para cada artefato publicado por API.
+
+    TRES COMPARACOES EM ORDEM, e a ordem importa porque a primeira que diverge
+    ja responde: existe -> versao -> corpo.
+
+    A versao sozinha nao basta (alguem publica sem subir o numero) e o corpo
+    sozinho tambem nao (dizer "divergente" sem dizer de QUANTAS versoes nao
+    ajuda a decidir).
+
+    NAO IMPRIME O CODIGO em nenhum achado: e fonte com valve e chave dentro.
+    """
+    ler = leitor or _publicado_do_painel
+    achados = []
+    conferidos = identicos = 0
+    for tipo, ident, rel in (publicados or _PUBLICADOS):
+        caminho = os.path.join(plataforma, rel)
+        no_repo = _ler(caminho)
+        if not no_repo:
+            continue                     # artefato que nao existe no repo: nao e desta classe
+        fonte, motivo = ler(tipo, ident)
+        if fonte is None:
+            # NAO CONSEGUI OLHAR. Este estado e obrigatorio e nao e detalhe: uma
+            # classe que nao pode conferir e diz "nada encontrado" e a forma mais
+            # silenciosa de um conferidor mentir - o /api/v1/models/ passou dias
+            # assim (D57).
+            achados.append(_achado(
+                "nao_conferido",
+                "publicado_divergente NAO foi conferida para %s %r: %s"
+                % (tipo, ident, motivo),
+                "ambiente de execucao",
+                "classe nao conferida contada como 'nada encontrado' e a forma "
+                "mais silenciosa de um conferidor mentir"))
+            continue
+        if fonte == "":
+            achados.append(_achado(
+                "publicado_ausente",
+                "%s %r existe no repo e NAO esta publicada no painel" % (tipo, ident),
+                rel,
+                "codigo que ninguem publicou nao roda - e quem le o repo supoe "
+                "que roda"))
+            continue
+        conferidos += 1
+        a, b = _normalizar_fonte(fonte), _normalizar_fonte(no_repo)
+        if a == b:
+            identicos += 1
+            continue
+        v_painel, v_repo = _versao_de(fonte), _versao_de(no_repo)
+        dif, primeira = _tamanho_da_diferenca(a, b)
+        achados.append(_achado(
+            "publicado_divergente",
+            "%s %r: painel version=%s x repo version=%s "
+            "(%d linha(s) realmente diferentes; 1a divergencia na linha %s)"
+            % (tipo, ident, v_painel or "?", v_repo or "?", dif,
+               primeira if primeira is not None else "?"),
+            rel,
+            "o que roda nao e o que esta escrito; todo diagnostico do produto "
+            "parte da suposicao contraria"))
+    # CONTA EM VOZ ALTA o que conferiu, mesmo quando esta tudo igual.
+    #
+    # POR QUE: a primeira rodada desta classe voltou SILENCIOSA, e silencio tem
+    # dois significados incompativeis - "conferi os quatro e batem" e "nao rodei".
+    # Sem esta linha, distinguir os dois exigiria ler o codigo; foi exatamente o
+    # que custou dias no /api/v1/models/ e o que o D37 descreve. Alarme que so
+    # fala quando ha problema nao prova que olhou.
+    print("  publicado x repo: %d conferido(s), %d identico(s)"
+          % (conferidos, identicos))
+    return achados
+
+
 def codigo_de_saida(achados):
     """2 = achou (RESULTADO), 0 = limpo, 1 fica reservado para FALHA do script.
 
@@ -491,23 +698,73 @@ _RE_ID_MODELO = re.compile(r"`(nidum-[a-z0-9-]+)`")
 
 
 def _modelos_do_painel():
-    """{id do modelo: nome de exibicao} do painel, ou None sem credencial."""
+    """{id do modelo: nome de exibicao} do painel, ou (None, motivo).
+
+    O ENDPOINT CERTO E /api/v1/models/list, E A BARRA FINAL ERA O DEFEITO.
+
+    `modelo_renomeado` era a unica classe NAO CONFERIDA do relatorio ha dias, com
+    a mensagem "a base nao respondeu a /api/v1/models/ (Expecting value: line 1
+    column 1 (char 0))" - corpo vazio ou nao-JSON. A causa esta escrita no proprio
+    codigo do backend, em `routers/models.py`:
+
+        @router.get("/list", ...)  # do NOT use "/" as path, conflicts with main.py
+
+    O router NAO define "/" de proposito, porque `main.py` registra
+    `@app.get("/api/v1/models")` (sem barra) como compatibilidade com a API da
+    OpenAI. Pedir COM barra nao casa rota nenhuma no router e cai no
+    redirecionamento de barra do FastAPI - que responde sem corpo JSON. O
+    conferidor lia esse vazio e, corretamente, dizia que nao conseguiu conferir.
+
+    NAO ERA FALHA DE CREDENCIAL NEM DE REDE: era um caractere no caminho, com o
+    aviso escrito na linha de cima do endpoint, do outro lado do repositorio.
+
+    E PAGINA, como /api/v1/knowledge/: devolve {items, total}. Mesma licao do
+    PR #66 e do catalogo de colecoes - ler a primeira pagina e chamar de
+    inventario funciona ate existirem mais modelos que uma pagina, e nesse dia o
+    que faltar e justamente o que ninguem confere. O laco para por `total`.
+    """
     base = os.environ.get("OPENWEBUI_BASE_URL")
     chave = os.environ.get("OPENWEBUI_API_KEY")
     if not base or not chave:
         return None, "faltam OPENWEBUI_BASE_URL/OPENWEBUI_API_KEY neste ambiente"
     import urllib.request
-    req = urllib.request.Request(base.rstrip("/") + "/api/v1/models/",
-                                 headers={"Authorization": "Bearer " + chave})
-    try:
+
+    def _pegar(caminho):
+        req = urllib.request.Request(base.rstrip("/") + caminho,
+                                     headers={"Authorization": "Bearer " + chave})
         with urllib.request.urlopen(req, timeout=60) as r:
-            dados = json.loads(r.read().decode())
-    except Exception as e:
-        return None, "a base nao respondeu a /api/v1/models/ (%s)" % str(e)[:60]
-    out = {}
-    for m in (dados or []):
-        if isinstance(m, dict) and m.get("id"):
-            out[str(m["id"]).strip()] = (m.get("name") or "").strip()
+            return json.loads(r.read().decode())
+
+    out, total, pagina = {}, None, 1
+    while True:
+        try:
+            d = _pegar("/api/v1/models/list?page=%d" % pagina)
+        except Exception as e:
+            return None, ("a base nao respondeu a /api/v1/models/list (%s)"
+                          % str(e)[:70])
+        if isinstance(d, list):                   # formato antigo: lista crua
+            itens, total = d, len(d)
+        elif isinstance(d, dict) and isinstance(d.get("items"), list):
+            itens = d["items"]
+            if total is None:
+                total = d.get("total")
+        else:
+            return None, ("/api/v1/models/list nao devolveu {items,total} nem "
+                          "lista (veio %s)" % type(d).__name__)
+        antes = len(out)
+        for m in itens:
+            if isinstance(m, dict) and m.get("id"):
+                out[str(m["id"]).strip()] = (m.get("name") or "").strip()
+        if not itens or len(out) == antes:
+            break
+        if not isinstance(total, int) or len(out) >= total:
+            break
+        pagina += 1
+        if pagina > 200:
+            return None, "/api/v1/models/list nao termina de paginar (200 paginas)"
+    if isinstance(total, int) and len(out) < total:
+        return None, ("o painel declara %d modelos e a paginacao entregou %d - "
+                      "inventario INCOMPLETO" % (total, len(out)))
     return out, None
 
 
@@ -701,6 +958,26 @@ def conferir(plataforma=None, esteira=None):
             contagens, ids_por_nome, _ids_declarados(esteira),
             _bases_que_ficam_vazias(esteira)))
 
+    # I - o que esta PUBLICADO x o que esta no repo (doc 14). Pipe e tools vao por
+    # API, manualmente: mergear na main nao publica, e ate hoje nada comparava os
+    # dois lados. Nao bloqueia - divergencia e estado normal entre merge e publish.
+    pub = _seguro(conferir_publicado, plataforma)
+    if pub is None:
+        # `_seguro` devolve None quando a coleta QUEBRA. Escrever
+        # `_seguro(...) or []` seria transformar "explodiu" em "nada encontrado" -
+        # o defeito que este arquivo inteiro existe para pegar, cometido na
+        # chamada da classe mais nova. Todos os outros chamadores tratam o None
+        # explicitamente; este nao tratava, e por isso a primeira rodada em CI
+        # voltou silenciosa em vez de dizer o que houve.
+        achados.append(_achado(
+            "nao_conferido",
+            "publicado_divergente NAO foi conferida: a coleta quebrou",
+            "ambiente de execucao",
+            "classe nao conferida contada como 'nada encontrado' e a forma mais "
+            "silenciosa de um conferidor mentir"))
+    else:
+        achados.extend(pub)
+
     # E - fixture com caminho de pasta inexistente
     pastas = _pastas_do_repo(esteira)
     if pastas:
@@ -761,6 +1038,12 @@ _TITULOS = {
                          "(nao e erro: falta a ligacao escrita)"),
     "fixture_vencida": ("Fixtures apontando para pasta que nao existe "
                         "(LISTA PARA REVISAO: parte pode ser sintetica)"),
+    "frac_catastrofe": "FRAC_CATASTROFE fora do valor de desenho (0,25)",
+    "base_indevida": ("Base com conteudo que NAO devia receber arquivo "
+                      "(pasta-mae declarada como excluida)"),
+    "publicado_divergente": ("O que esta PUBLICADO diverge do repositorio "
+                             "(pipe e tools vao por API, nao por deploy)"),
+    "publicado_ausente": "Existe no repo e NAO esta publicado no painel",
 }
 
 
@@ -776,11 +1059,29 @@ def relatar(achados):
           % (len(achados), len(por_classe)))
     print("Nenhuma quebra nada agora - e esse o problema: elas so aparecem "
           "quando alguem tropeca.\n")
-    for classe in _TITULOS:
+    # ITERA O QUE EXISTE, e nao a lista de titulos.
+    #
+    # O DEFEITO (11/09/2026), e ele durou uma rodada: o laco era
+    # `for classe in _TITULOS`. Classe sem titulo entrava na CONTAGEM do
+    # cabecalho e nunca era IMPRESSA. Foi o que aconteceu com as duas classes
+    # novas do publicado: "81 divergencias em 7 classes" com seis secoes na
+    # tela - e as duas que faltavam eram justamente as recem-escritas.
+    #
+    # E o D51 na propria ferramenta: o universo do relatorio era uma LISTA
+    # DECLARADA, entao tudo que nasce fora dela e invisivel POR CONSTRUCAO. A
+    # ordem dos titulos continua mandando na apresentacao; o que mudou e que
+    # classe sem titulo aparece assim mesmo, com o nome cru e um aviso - porque
+    # achado que nao cabe numa gaveta conhecida e o que mais precisa ser visto.
+    conhecidas = [c for c in _TITULOS if c in por_classe]
+    novas = [c for c in sorted(por_classe) if c not in _TITULOS]
+    for classe in conhecidas + novas:
         itens = por_classe.get(classe)
         if not itens:
             continue
-        print("== %s (%d) ==" % (_TITULOS[classe], len(itens)))
+        titulo = _TITULOS.get(classe)
+        if titulo is None:
+            titulo = "%s (classe SEM TITULO - acrescente em _TITULOS)" % classe
+        print("== %s (%d) ==" % (titulo, len(itens)))
         print("   consequencia: %s" % itens[0]["consequencia"])
         for a in itens:
             print("   - [%s] %s" % (a["onde"], a["detalhe"]))

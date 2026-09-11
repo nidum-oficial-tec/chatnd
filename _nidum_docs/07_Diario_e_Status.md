@@ -13,6 +13,175 @@
 
 ---
 
+## 2026-09-11 — FECHO DA SEMANA: de "o chat não responde bem a tarefas complexas" a 20 origens
+
+> **Este é o documento para quem chegar daqui a seis meses e perguntar por que o
+> sistema é assim.** A semana começou com uma queixa de produto e terminou com uma
+> régua. Entre as duas coisas, quase nada era o que parecia.
+
+### A queixa, e por que ela estava certa pelo motivo errado
+
+A semana abriu com *"o chat não responde bem a tarefas complexas"*. A leitura natural
+— e a que quase seguimos — era **qualidade de raciocínio**: prompt, modelo, ranking.
+
+Era **alcance**. Todas as vezes.
+
+O agente nunca inventou, nunca fingiu completude, nunca contradisse a fonte. Ele
+respondia com honestidade sobre o pedaço do acervo que conseguia ver — e o pedaço era
+pequeno. *"10 pendências nas 4 atas"* estava **correto**; o que faltava era que havia
+108 atas.
+
+> **Resposta honesta e incompleta é a pior combinação possível: não há sintoma, e quem
+> lê não tem como desconfiar.**
+
+Isso definiu o método da semana inteira: quando a resposta parecia fraca, a pergunta
+não era *"o modelo entendeu?"* — era *"o que ele conseguiu ver?"*.
+
+### O que era de verdade
+
+Sete coisas, nenhuma delas prompt.
+
+**1. A listagem escondia bases.** `list_knowledge_bases` cortava em 10 num universo de
+doze e ordenava por `updated_at` — campo que `file/add` não toca. **A base mais estável
+era a primeira a sumir**: quanto mais antiga e confiável, mais invisível. O agente
+respondia "atas anteriores não disponíveis", e para ele era verdade.
+
+**2. O `#` não escopava nada.** Selecionar uma base mostrava o chip e injetava o
+contexto — e a ferramenta era chamada **sem** `knowledge_ids`, trazendo fontes de bases
+que ninguém escolheu. Contexto certo, ferramenta cega, e o modelo decide pela
+ferramenta.
+
+**3. O eixo estava errado.** Sete coleções por tipo de documento, num mundo onde quem
+pergunta pensa por assunto. Viraram onze bases, uma por pasta-mãe. **`nd-normas` não
+dizia o que continha; `Operações` diz.**
+
+**4. A esteira perdia arquivo em silêncio.** Três lugares diferentes, todos pela mesma
+causa: **o nome do arquivo usado como identidade**. 24 `TUTORIAL.txt` viravam 1 na área
+de passagem; o pareamento escolhia homônimo arbitrário; 54 colisões de chave resolvidas
+por "o último processado". Nesta árvore o nome descreve o **papel** do documento dentro
+da pasta — não o documento. **A pasta é que identifica.**
+
+**5. Um modo seguro desligava a proteção.** Seis vezes. O `resync` desligava a detecção
+de movimentação e deixou 92 caminhos abandonados; o `dry_run` fechava a issue de
+bloqueio sem pagar a dívida; um default desligava a limpeza de disco. **O mecanismo
+existia, estava correto, era exercitado — e um modo o tornava inerte.** Nenhuma revisão
+de código pega isso, porque o código está certo: o que está errado é o alcance.
+
+**6. Uma guarda vigiava o lugar errado.** Havia guarda de colisão. Funcionava. E
+comparava o `.md` **previsto** enquanto a colisão acontecia na **área de passagem**.
+Guarda presente, ligada, correta — apontada para o estágio errado do pipeline.
+
+**7. O alarme certo falava numa sala vazia.** A conferência diária reportava 86 órfãos
+**todo dia**, com o número certo. Ninguém leu — porque dos 147 faltantes, 75 eram
+explicados, e **alarme majoritariamente falso treina o leitor a não ler**. O conserto
+não foi pedir disciplina: foi tirar os 70 falsos e dar ao resto uma lista com motivo por
+linha.
+
+### O que mudou de 4 para 20
+
+A Fase D trocou **busca** por **leitura**. `query_knowledge_files` é top-k: por
+definição devolve os k trechos mais parecidos, **nunca todos**. Enumerar não é um
+problema de prompt — é um problema de forma.
+
+Cada ata ganhou uma **ficha de fatos** (`.fatos.md`): decisões e pendências em linhas
+fixas, ~1.500 chars, gravada na mesma pasta da ata — logo na mesma base, e o `#`
+continua valendo sem código novo. 98 atas inteiras são 987.805 chars; as fichas cabem
+no orçamento, e o agente lê **todas**.
+
+**E a ficha declara o que não conseguiu ler.** Onde a pendência veio em tabela e a
+conversão do PDF a partiu, a ficha diz `cobertura: pendencias=ilegivel` e manda ler a
+ata. Ata sem estrutura não ganha ficha vazia — não ganha ficha. Porque:
+
+> **Conteúdo que parece conteúdo é pior que ausência, porque a ausência a esteira
+> declara.**
+
+### A régua
+
+| medição | origens | quando |
+|---|---:|---|
+| semana passada | **2** | antes de tudo |
+| Fase A (03/09) | **4** | 4 atas de 108; ~96% do acervo invisível |
+| 10/09 | **6** | listagem e `#` consertados |
+| **11/09** | **20** | **8 fichas, 7 pastas cruzadas** |
+
+No teste final o agente **foi à ficha primeiro e à ata onde precisou** — que é
+exatamente o desenho. 20 origens cruzando Reuniões, MUN, TEC, PROD, MKT e
+Juridico/Contratos; 21 linhas de pendência organizadas por origem, em HTML on-brand.
+
+**Este é o número que mede qualquer mudança futura.** Não o 4, não o 6.
+
+### O estado da base, no fecho
+
+**759 arquivos, onze bases, 0 órfãos, 0/0 em cada coleção.** Repo com 863 `.md` — a
+diferença são as exclusões declaradas (due diligence, NF de coautor, cadastros, stubs
+vazios). Conferência SharePoint × base: **0 órfãos, 30 faltantes**, os 30 inteiramente
+explicados.
+
+O que destravou foi pequeno e tardio: a atualização do sync não era resiliente. **Um
+400 num documento derrubava os 100 seguintes** — e o irmão dessa função, o
+`_add_resiliente`, já estava ali ao lado tratando o mesmo tipo de erro sem derrubar
+nada. Três rodadas morreram antes de alguém notar que a assimetria era o defeito.
+
+### O que a E1 não entregou
+
+**31 das 56 fichas ainda têm as pendências ilegíveis**, porque vêm em tabela. O gerador
+de atas já emite em lista daqui em diante (GeradorAta #9) — as antigas ficam. **A
+medição que decide se vale regerar as 31 é a primeira ata nova no formato lista**,
+comparada com uma antiga equivalente.
+
+E fica dito sem suavizar: a pergunta do teste 1 era sobre **pendências**, e é
+justamente nelas que a cobertura é pior. O 20 é real; não é completo.
+
+### O que esta semana ensina, e vale além deste projeto
+
+**Defeito de alcance não aparece em revisão de código.** Todos os sete achados eram
+código correto cobrindo menos do que se supunha — guarda no estágio errado, mecanismo
+desligado por um default, comparação que nunca acontecia, alarme certo sem leitor. Ler o
+código não pega nenhum deles. O que pega é **rodar contra dado real e perguntar por que
+o resultado é esse** — inclusive, e principalmente, quando o resultado é verde.
+
+E o corolário que custou mais caro: **quando o sistema responde algo honesto e
+incompleto, o problema quase nunca está onde a queixa aponta.** A queixa era sobre
+qualidade. A resposta foi alcance, sete vezes seguidas.
+
+---
+
+## 2026-09-10 - AUDITORIA DE CUSTO DO RAILWAY: o que cada coisa e, e o que sai
+
+> Registro completo em `08_Decisoes_e_Pendencias.md`: **D40** (topologia e custo),
+> **D41** (`MALLOC_ARENA_MAX=2` fica), **D42** (reranker por API), **D43** (zerar a
+> base descartado) e a tabela de acoes pendentes da auditoria.
+
+**O que a auditoria mostrou (09/09, com a CLI e SQL so-leitura):** o custo do
+projeto era **RAM do container ChatND** (14,6 GB medios nos 3 dias antes do deploy),
+nao embedding (US$ 0,25 na semana de pico da esteira) nem armazenamento. O bucket
+`stocked-cup-MSag` (5 GB) e o WAL do PITR do Postgres, nao arquivos gerados; o bucket
+`Postgres-PITR` esta vazio; `tts-thalita` e uma POC de 30/07 sem trafego; ha dois
+volumes Postgres desanexados sendo cobrados.
+
+**O que mudou em producao:** nada por esta sessao. O deploy de 09/09 21:32 UTC
+(merge do #66) foi o primeiro a levar o `MALLOC_ARENA_MAX=2` do PR #65 - e 12 h
+depois a RAM esta plana em 1,58 GB (era 10-17 GB). Medicao e metodo no D41.
+
+**O que foi entregue:**
+- `_nidum_manutencao/limpeza_armazenamento.py` (PR proprio): tres modos com
+  simulacao por padrao, ja simulados em producao - 2.600 copias locais orfas
+  (90 MB), 51 arquivos gerados com mais de 30 dias (14 MB), 44 anexos de chat
+  parados ha mais de 60 dias (1.226 chunks, ~25 MB do indice).
+- Este registro (PR proprio).
+
+**Causa do #79 (esteira):** o teste mensal de restauracao aponta para um Postgres
+descartavel que ja nao existe (`TESTE_DATABASE_URL` de 09/07). O backup nao foi
+provado desde 09/07 - mas tambem nao ha evidencia de que esteja quebrado.
+
+**Decisoes do Davi no mesmo dia (10/09):** reranker FICA local (D42 - terceiro
+sub-processador; politica de retencao nao lida); zerar a base descartado (D43);
+limpeza executada (2.600 orfaos + 51 gerados; anexos aguardam OK); backup = PITR
+primario + dump semanal (#79 fechado com a causa); esteira 6h -> 12h; marcador
+NAO_INDEXAR.txt aprovado e implementado (PR na esteira); Fase E = o preset agentico
+e a proxima versao do ChatND - lista do que so o pipe faz esta no 08.
+Depois: voltar ao que estava - teste do `#`, contagem das 11, teste 1, primeira ficha.
+
 ## 2026-09-05 - O EIXO DAS COLECOES MUDA: base = pasta-mae
 
 > Entrada escrita na `main`. A entrada do fechamento da Fase A (03/09) esta no PR
