@@ -428,9 +428,27 @@ def _commit_correspondente(plataforma, rel, publicado_norm, limite=40):
     def _git(*a):
         return subprocess.run(["git"] + list(a), cwd=plataforma, capture_output=True,
                               text=True, encoding="utf-8", errors="replace").stdout
+    # CLONE RASO NAO E "NAO ENCONTREI" - e "nao tenho onde procurar".
+    #
+    # `actions/checkout@v4` traz UM commit por padrao (fetch-depth: 1). Com isso
+    # o laco abaixo nao acha ancora nenhuma e a conclusao sai como "o conteudo
+    # publicado nao corresponde a nenhum commit" - que se le como "alguem editou
+    # producao pela tela". Foi o que este achado disse na primeira rodada, e era
+    # artefato do ambiente, nao fato do painel.
+    #
+    # E o mesmo defeito que o conferidor inteiro existe para pegar, cometido
+    # dentro dele: uma resposta DEFINITIVA construida sobre uma fonte que nao
+    # estava la. Aqui ela vira um estado proprio.
     saida = _git("log", "-n", str(limite), "--format=%H|%h|%ad", "--date=short",
                  "--", rel)
-    for n, linha in enumerate((saida or "").strip().split(chr(10))):
+    linhas_log = [l for l in (saida or "").strip().split(chr(10)) if l.strip()]
+    # O CRITERIO E QUANTOS COMMITS HA PARA PROCURAR, e nao a flag de clone raso.
+    # Um clone raso pode ter dezenas de commits (o enxerto so corta o fundo), e
+    # nesse caso a busca funciona. O que impede de responder e ter UM commit -
+    # o que `actions/checkout@v4` traz por padrao.
+    if len(linhas_log) < 2:
+        return "SEM_HISTORICO"
+    for n, linha in enumerate(linhas_log):
         if not linha.strip():
             continue
         partes = linha.split("|")
@@ -525,7 +543,10 @@ def conferir_publicado(plataforma, publicados=None, leitor=None):
         dif, primeira = _tamanho_da_diferenca(a, b)
         # QUAL LADO ESTA A FRENTE - a pergunta que o tamanho nao responde.
         ancora = _seguro(_commit_correspondente, plataforma, rel, a)
-        if ancora:
+        if ancora == "SEM_HISTORICO":
+            onde = ("NAO DA PARA DIZER qual lado esta a frente: o checkout tem UM "
+                    "commit e nao ha historico para comparar - use fetch-depth: 0")
+        elif ancora:
             onde = ("o painel e o commit %s de %s, %d commit(s) atras do repo"
                     % (ancora[0], ancora[1], ancora[2]))
         else:

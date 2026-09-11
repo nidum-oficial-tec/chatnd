@@ -295,6 +295,18 @@ def main():
               r is not None and r[2] == 2)
         check("e devolve sha curto e data", bool(r and r[0] and r[1]))
         r2 = CR._commit_correspondente(".", rel, "conteudo que nunca existiu")
+        # SEM HISTORICO nao e "nao encontrei" - e "nao tenho onde procurar".
+        # actions/checkout@v4 traz UM commit por padrao, e com isso a busca nao
+        # acha ancora e a conclusao sairia como "o publicado nao corresponde a
+        # nenhum commit" - que se le como "editaram producao pela tela". Foi
+        # exatamente o que este achado disse na primeira rodada em CI.
+        import tempfile as _tf2, subprocess as _sp2
+        vazio = _tf2.mkdtemp()
+        _sp2.run(["git", "init", "-q"], cwd=vazio, capture_output=True)
+        r3 = CR._commit_correspondente(vazio, rel, "qualquer coisa")
+        check("repo sem historico -> SEM_HISTORICO (nunca 'nao corresponde')",
+              r3 == "SEM_HISTORICO")
+        shutil.rmtree(vazio, ignore_errors=True)
         check("conteudo que nunca existiu no repo -> None (nao inventa ancora)",
               r2 is None)
     else:
