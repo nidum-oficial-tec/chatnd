@@ -350,6 +350,35 @@ def _publicado_do_painel(tipo, ident, _cache={}):
     return "", None                      # nao publicada: string vazia, nao None
 
 
+def _tamanho_da_diferenca(a, b):
+    """(linhas realmente diferentes, numero da 1a divergencia). PURA.
+
+    POR QUE NAO E UM `zip` POSICAO A POSICAO - e a primeira versao desta funcao
+    era exatamente isso. Com UMA linha inserida no topo, todas as seguintes ficam
+    deslocadas e contam como diferentes. A primeira rodada em producao devolveu
+    "5655 linhas diferentes" num arquivo de 6559, e "2686" num de 2711 - numeros
+    que mandam republicar tudo quando a verdade pode ser uma linha.
+
+    NUMERO INFLADO E PIOR QUE NUMERO AUSENTE: a ausencia manda medir; o inflado
+    manda agir errado, e com a confianca de quem tem um dado na mao. E o
+    conteudo que parece conteudo (D54) na forma de metrica.
+
+    `difflib` alinha os blocos iguais antes de contar, entao o numero passa a ser
+    o que uma pessoa chamaria de diferenca. E a 1a linha divergente diz se a
+    mudanca esta no cabecalho (version, docstring) ou no corpo.
+    """
+    import difflib
+    la, lb = a.split(chr(10)), b.split(chr(10))
+    dif, primeira = 0, None
+    for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, la, lb).get_opcodes():
+        if tag == "equal":
+            continue
+        dif += max(i2 - i1, j2 - j1)
+        if primeira is None:
+            primeira = min(i1, j1) + 1
+    return dif, primeira
+
+
 def conferir_publicado(plataforma, publicados=None, leitor=None):
     """Painel x repo, para cada artefato publicado por API.
 
@@ -398,12 +427,13 @@ def conferir_publicado(plataforma, publicados=None, leitor=None):
             identicos += 1
             continue
         v_painel, v_repo = _versao_de(fonte), _versao_de(no_repo)
-        dif = sum(1 for x, y in zip(a.split("\n"), b.split("\n")) if x != y)
-        dif += abs(len(a.split("\n")) - len(b.split("\n")))
+        dif, primeira = _tamanho_da_diferenca(a, b)
         achados.append(_achado(
             "publicado_divergente",
-            "%s %r: painel version=%s x repo version=%s (%d linha(s) diferentes)"
-            % (tipo, ident, v_painel or "?", v_repo or "?", dif),
+            "%s %r: painel version=%s x repo version=%s "
+            "(%d linha(s) realmente diferentes; 1a divergencia na linha %s)"
+            % (tipo, ident, v_painel or "?", v_repo or "?", dif,
+               primeira if primeira is not None else "?"),
             rel,
             "o que roda nao e o que esta escrito; todo diagnostico do produto "
             "parte da suposicao contraria"))
