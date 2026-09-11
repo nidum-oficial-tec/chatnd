@@ -861,6 +861,9 @@ _TITULOS = {
                          "(nao e erro: falta a ligacao escrita)"),
     "fixture_vencida": ("Fixtures apontando para pasta que nao existe "
                         "(LISTA PARA REVISAO: parte pode ser sintetica)"),
+    "publicado_divergente": ("O que esta PUBLICADO diverge do repositorio "
+                             "(pipe e tools vao por API, nao por deploy)"),
+    "publicado_ausente": "Existe no repo e NAO esta publicado no painel",
 }
 
 
@@ -876,11 +879,29 @@ def relatar(achados):
           % (len(achados), len(por_classe)))
     print("Nenhuma quebra nada agora - e esse o problema: elas so aparecem "
           "quando alguem tropeca.\n")
-    for classe in _TITULOS:
+    # ITERA O QUE EXISTE, e nao a lista de titulos.
+    #
+    # O DEFEITO (11/09/2026), e ele durou uma rodada: o laco era
+    # `for classe in _TITULOS`. Classe sem titulo entrava na CONTAGEM do
+    # cabecalho e nunca era IMPRESSA. Foi o que aconteceu com as duas classes
+    # novas do publicado: "81 divergencias em 7 classes" com seis secoes na
+    # tela - e as duas que faltavam eram justamente as recem-escritas.
+    #
+    # E o D51 na propria ferramenta: o universo do relatorio era uma LISTA
+    # DECLARADA, entao tudo que nasce fora dela e invisivel POR CONSTRUCAO. A
+    # ordem dos titulos continua mandando na apresentacao; o que mudou e que
+    # classe sem titulo aparece assim mesmo, com o nome cru e um aviso - porque
+    # achado que nao cabe numa gaveta conhecida e o que mais precisa ser visto.
+    conhecidas = [c for c in _TITULOS if c in por_classe]
+    novas = [c for c in sorted(por_classe) if c not in _TITULOS]
+    for classe in conhecidas + novas:
         itens = por_classe.get(classe)
         if not itens:
             continue
-        print("== %s (%d) ==" % (_TITULOS[classe], len(itens)))
+        titulo = _TITULOS.get(classe)
+        if titulo is None:
+            titulo = "%s (classe SEM TITULO - acrescente em _TITULOS)" % classe
+        print("== %s (%d) ==" % (titulo, len(itens)))
         print("   consequencia: %s" % itens[0]["consequencia"])
         for a in itens:
             print("   - [%s] %s" % (a["onde"], a["detalhe"]))

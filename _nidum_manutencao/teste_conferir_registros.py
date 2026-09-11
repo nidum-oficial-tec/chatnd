@@ -158,6 +158,26 @@ def main():
     check("a consequencia explica o dano, nao repete o fato",
           len(a["consequencia"]) > 40)
 
+    print("\n== o relatorio NAO some com classe sem titulo ==")
+    # O DEFEITO, e durou uma rodada: o laco era `for classe in _TITULOS`, entao
+    # classe sem titulo entrava na CONTAGEM do cabecalho e nunca era impressa.
+    # Saiu "81 divergencias em 7 classes" com SEIS secoes na tela - e as duas que
+    # faltavam eram justamente as recem-escritas. E o D51 na propria ferramenta:
+    # o universo do relatorio era uma lista DECLARADA.
+    import io as _io
+    import contextlib as _ctx
+    buf = _io.StringIO()
+    with _ctx.redirect_stdout(buf):
+        CR.relatar([CR._achado("classe_inedita", "detalhe x", "onde", "dano y")])
+    saida = buf.getvalue()
+    check("classe desconhecida APARECE no relatorio", "classe_inedita" in saida)
+    check("e avisa que falta titulo", "SEM TITULO" in saida)
+    check("e o detalhe nao se perde", "detalhe x" in saida)
+    # As duas classes do publicado agora TEM titulo - se alguem as remover do
+    # mapa, o teste acima garante que elas ainda aparecem, mas feias.
+    check("publicado_divergente tem titulo", "publicado_divergente" in CR._TITULOS)
+    check("publicado_ausente tem titulo", "publicado_ausente" in CR._TITULOS)
+
     print("\n== job VERDE ao encontrar (mesma regra do relatorio de orfaos) ==")
     check("achou -> codigo 2 (resultado, nao falha)",
           CR.codigo_de_saida([{"classe": "x"}]) == 2)
