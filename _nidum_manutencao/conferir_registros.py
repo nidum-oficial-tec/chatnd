@@ -350,23 +350,73 @@ _RE_ID_MODELO = re.compile(r"`(nidum-[a-z0-9-]+)`")
 
 
 def _modelos_do_painel():
-    """{id do modelo: nome de exibicao} do painel, ou None sem credencial."""
+    """{id do modelo: nome de exibicao} do painel, ou (None, motivo).
+
+    O ENDPOINT CERTO E /api/v1/models/list, E A BARRA FINAL ERA O DEFEITO.
+
+    `modelo_renomeado` era a unica classe NAO CONFERIDA do relatorio ha dias, com
+    a mensagem "a base nao respondeu a /api/v1/models/ (Expecting value: line 1
+    column 1 (char 0))" - corpo vazio ou nao-JSON. A causa esta escrita no proprio
+    codigo do backend, em `routers/models.py`:
+
+        @router.get("/list", ...)  # do NOT use "/" as path, conflicts with main.py
+
+    O router NAO define "/" de proposito, porque `main.py` registra
+    `@app.get("/api/v1/models")` (sem barra) como compatibilidade com a API da
+    OpenAI. Pedir COM barra nao casa rota nenhuma no router e cai no
+    redirecionamento de barra do FastAPI - que responde sem corpo JSON. O
+    conferidor lia esse vazio e, corretamente, dizia que nao conseguiu conferir.
+
+    NAO ERA FALHA DE CREDENCIAL NEM DE REDE: era um caractere no caminho, com o
+    aviso escrito na linha de cima do endpoint, do outro lado do repositorio.
+
+    E PAGINA, como /api/v1/knowledge/: devolve {items, total}. Mesma licao do
+    PR #66 e do catalogo de colecoes - ler a primeira pagina e chamar de
+    inventario funciona ate existirem mais modelos que uma pagina, e nesse dia o
+    que faltar e justamente o que ninguem confere. O laco para por `total`.
+    """
     base = os.environ.get("OPENWEBUI_BASE_URL")
     chave = os.environ.get("OPENWEBUI_API_KEY")
     if not base or not chave:
         return None, "faltam OPENWEBUI_BASE_URL/OPENWEBUI_API_KEY neste ambiente"
     import urllib.request
-    req = urllib.request.Request(base.rstrip("/") + "/api/v1/models/",
-                                 headers={"Authorization": "Bearer " + chave})
-    try:
+
+    def _pegar(caminho):
+        req = urllib.request.Request(base.rstrip("/") + caminho,
+                                     headers={"Authorization": "Bearer " + chave})
         with urllib.request.urlopen(req, timeout=60) as r:
-            dados = json.loads(r.read().decode())
-    except Exception as e:
-        return None, "a base nao respondeu a /api/v1/models/ (%s)" % str(e)[:60]
-    out = {}
-    for m in (dados or []):
-        if isinstance(m, dict) and m.get("id"):
-            out[str(m["id"]).strip()] = (m.get("name") or "").strip()
+            return json.loads(r.read().decode())
+
+    out, total, pagina = {}, None, 1
+    while True:
+        try:
+            d = _pegar("/api/v1/models/list?page=%d" % pagina)
+        except Exception as e:
+            return None, ("a base nao respondeu a /api/v1/models/list (%s)"
+                          % str(e)[:70])
+        if isinstance(d, list):                   # formato antigo: lista crua
+            itens, total = d, len(d)
+        elif isinstance(d, dict) and isinstance(d.get("items"), list):
+            itens = d["items"]
+            if total is None:
+                total = d.get("total")
+        else:
+            return None, ("/api/v1/models/list nao devolveu {items,total} nem "
+                          "lista (veio %s)" % type(d).__name__)
+        antes = len(out)
+        for m in itens:
+            if isinstance(m, dict) and m.get("id"):
+                out[str(m["id"]).strip()] = (m.get("name") or "").strip()
+        if not itens or len(out) == antes:
+            break
+        if not isinstance(total, int) or len(out) >= total:
+            break
+        pagina += 1
+        if pagina > 200:
+            return None, "/api/v1/models/list nao termina de paginar (200 paginas)"
+    if isinstance(total, int) and len(out) < total:
+        return None, ("o painel declara %d modelos e a paginacao entregou %d - "
+                      "inventario INCOMPLETO" % (total, len(out)))
     return out, None
 
 
