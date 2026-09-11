@@ -545,6 +545,66 @@ def _tamanho_da_diferenca(a, b):
     return dif, primeira
 
 
+def conferir_config_producao():
+    """Configuracao que o codigo EXIGE e producao nao tem. Classe `config_ausente`.
+
+    POR QUE ISTO E CLASSE DE CONFERIDOR E NAO `log.warning` (D67, ponto 4):
+
+    O `WEBUI_URL` estava vazio em producao. O gerador avisava disso a cada
+    chamada, com a mensagem certa, dizendo a consequencia certa:
+
+        "WEBUI_URL vazia -> o link sai RELATIVO. Se o anexo nativo nao chegar,
+         o modelo transcreve o caminho e pode gerar 404."
+
+    O aviso saiu por UMA SEMANA. A DETECCAO NUNCA FALHOU - o que nao existia era
+    um leitor. `log.warning` em caminho de requisicao nao tem destinatario: vai
+    para um log que so se abre quando ja ha problema, e ai o aviso e ruido no
+    meio do incidente, nao prevencao dele.
+
+    E o motivo de ter ficado invisivel e o pior da historia: a MITIGACAO
+    funcionava. O anexo nativo torna o link desnecessario quando chega, entao
+    ninguem sentia falta - e a configuracao ruim sobreviveu justamente porque a
+    rede de seguranca segurava. Mitigacao que funciona bem o bastante REMOVE o
+    incentivo de consertar a causa.
+
+    Aqui o achado cai num relatorio que ja tem dono, ja roda semanalmente e ja e
+    lido. Nao e "mais um relatorio" - e tirar um sinal sem leitor e por no que
+    ja existe.
+
+    SONDA SEM ADMIN, de proposito: o `/opensearch.xml` e publico e interpola o
+    `WEBUI_URL` direto no XML (main.py). Se o template vier sem esquema, a
+    configuracao esta vazia. Uma sonda que precisa de menos privilegio quebra
+    menos vezes por motivo errado.
+    """
+    base = os.environ.get("OPENWEBUI_BASE_URL")
+    if not base:
+        return None, "falta OPENWEBUI_BASE_URL neste ambiente"
+    import urllib.request
+    try:
+        req = urllib.request.Request(base.rstrip("/") + "/opensearch.xml")
+        with urllib.request.urlopen(req, timeout=30) as r:
+            xml = r.read().decode("utf-8", "replace")
+    except Exception as e:
+        return None, "a base nao respondeu a /opensearch.xml (%s)" % str(e)[:60]
+
+    achados = []
+    m = re.search(r'template="([^"]*)"', xml)
+    alvo = m.group(1) if m else ""
+    if not alvo.lower().startswith("http"):
+        achados.append(_achado(
+            "config_ausente",
+            "WEBUI_URL esta VAZIA em producao (o /opensearch.xml monta %r, sem "
+            "host). Consequencia medida: o link do gerador sai RELATIVO e, no "
+            "laco agentico, o modelo o reescreve, perde a barra inicial e o "
+            "navegador resolve contra /c/<chat_id> -> 404."
+            % (alvo[:40] or "(vazio)"),
+            "Admin -> Configuracoes -> Geral -> WebUI URL",
+            "configuracao persistente: variavel de ambiente NAO pega (D62); "
+            "tem de ser o painel"))
+    print("  config de producao: %d ausente(s)" % len(achados))
+    return achados, None
+
+
 def conferir_publicado(plataforma, publicados=None, leitor=None, carimbeiro=None):
     """Painel x repo, para cada artefato publicado por API.
 
@@ -1067,6 +1127,17 @@ def conferir(plataforma=None, esteira=None):
     # Le do ambiente: na Action vem de vars.FRAC_CATASTROFE; na mao, de quem exportar.
     # Ausente NAO acusa - sem variavel vale o padrao do workflow, que ja e 0,25.
     achados.extend(conferir_frac_catastrofe(os.environ.get("FRAC_CATASTROFE")))
+    # D67 ponto 4: configuracao ausente entra AQUI, e nao num log que ninguem le.
+    _cfg, _motivo = _seguro(conferir_config_producao) or (None, "a coleta explodiu")
+    if _cfg is None:
+        achados.append(_achado(
+            "nao_conferido",
+            "config_ausente NAO foi conferida: %s" % (_motivo or "?"),
+            "ambiente de execucao",
+            "classe nao conferida contada como limpa e a forma mais silenciosa "
+            "de um conferidor mentir"))
+    else:
+        achados.extend(_cfg)
 
     # G - base que deveria estar vazia e nao esta. Precisa das contagens do painel,
     # que so existem com credencial; sem ela, a classe fica de fora E ISSO E DITO no
@@ -1154,6 +1225,7 @@ def conferir(plataforma=None, esteira=None):
 
 
 _TITULOS = {
+    "config_ausente": "CONFIGURACAO QUE PRODUCAO NAO TEM",
     "valve_fantasma": "Valves que a doc descreve e o codigo nao tem",
     "valve_nao_documentada": "Valves do codigo que a doc nao descreve",
     "default_divergente": "Defaults em que a doc e o codigo discordam",

@@ -77,8 +77,12 @@ Mais trabalhoso que o #8 e menos usado — mas é o item que mais "aparece" se s
 
 **#1 · Classificador de rota.** **Este item é o que a Fase E substitui**, não o que ela
 precisa portar: no laço, o modelo escolhe a ferramenta e a rota fixa deixa de existir.
-**Uma ressalva séria:** o "Chico" usa o `chatnd` como base model, e mudar as categorias
-do roteador atravessa produto. O corte não é só nosso.
+**A ressalva está SUSPENSA, não resolvida (11/09/2026).** O "Chico" usa o `chatnd` como
+base model, e mudar as categorias do roteador atravessa produto — *"o corte não é só
+nosso"*. Com o Chico **aposentado**, o #1 deixa de depender de terceiro. **Mas o
+acoplamento continua no código: se o Chico voltar, isto volta a ser PRÉ-REQUISITO, e
+não consideração.** Ver **D70** — *bloqueio removido* e *bloqueio adormecido* se
+parecem enquanto duram e se comportam de forma oposta quando a condição muda.
 
 **#5 · Termos canônicos.** Nasceu para consertar o classificador — o `gpt-5-mini` não
 sabe que "fazer da casa um ninho" é frase do Documento Fundador. **Sem classificador,
