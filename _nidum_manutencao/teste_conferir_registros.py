@@ -158,6 +158,22 @@ def main():
     check("a consequencia explica o dano, nao repete o fato",
           len(a["consequencia"]) > 40)
 
+    print("\n== o tamanho da diferenca e HONESTO ==")
+    # A primeira versao contava posicao a posicao (zip). Com UMA linha inserida
+    # no topo, todas as seguintes ficam deslocadas e contam como diferentes: a
+    # rodada em producao devolveu "5655 linhas diferentes" num arquivo de 6559.
+    # Numero inflado e PIOR que numero ausente - a ausencia manda medir; o
+    # inflado manda republicar tudo, com a confianca de quem tem um dado na mao.
+    base = chr(10).join("l%d" % i for i in range(100))
+    d, prim = CR._tamanho_da_diferenca(base, "nova" + chr(10) + base)
+    check("1 linha inserida no topo -> 1 (nao 100)", d == 1)
+    check("e aponta a linha 1", prim == 1)
+    d, prim = CR._tamanho_da_diferenca(base, base.replace("l50", "X50"))
+    check("1 linha trocada no meio -> 1", d == 1)
+    check("e aponta a linha 51", prim == 51)
+    d, prim = CR._tamanho_da_diferenca(base, base)
+    check("identicos -> 0 e nenhuma linha", d == 0 and prim is None)
+
     print("\n== o relatorio NAO some com classe sem titulo ==")
     # O DEFEITO, e durou uma rodada: o laco era `for classe in _TITULOS`, entao
     # classe sem titulo entrava na CONTAGEM do cabecalho e nunca era impressa.
