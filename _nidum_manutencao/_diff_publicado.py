@@ -127,6 +127,17 @@ def conferir(ident, ref):
 
     saida_src = "_publicado_%s.py" % ident
     saida_diff = "_diff_pub_vs_main_%s.txt" % ident
+    # NAO SOBRESCREVE UM RETRATO ANTERIOR - ele e PROVA, nao rascunho.
+    #
+    # Em 11/09 o retrato de 05/09 que estava no disco (365.233 bytes) datou a
+    # divergencia: o publicado de hoje tem 373.947, e a diferenca de 8.714 bytes
+    # apareceu em producao numa janela em que NINGUEM publicou pelo repo. Isso
+    # transformou "1.148 linhas para revisar" em "o que entrou depois de 05/09".
+    # Um `w` em cima teria apagado a unica coisa capaz de datar a mudanca.
+    if os.path.isfile(saida_src):
+        anterior = "_publicado_%s.ANTERIOR.py" % ident
+        os.replace(saida_src, anterior)
+        print("   (retrato anterior preservado em %s)" % anterior)
     io.open(saida_src, "w", encoding="utf-8", newline="").write(pub)
     diff = list(difflib.unified_diff(rl, pl, "repo:" + ref, "publicado",
                                      lineterm="", n=3))
