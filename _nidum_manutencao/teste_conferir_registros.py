@@ -279,6 +279,27 @@ def main():
     check("a consequencia explica o dano, nao repete o fato",
           len(a["consequencia"]) > 40)
 
+    print("\n== QUAL LADO esta a frente (a pergunta que o tamanho nao responde) ==")
+    # Saber que 1.148 linhas diferem NAO diz se o painel esta atrasado (e quanto)
+    # ou se alguem editou producao pela tela - e as duas exigem acoes opostas.
+    # Se o publicado casa com um commit antigo, o painel esta simplesmente ATRAS.
+    import subprocess as _sp
+    rel = os.path.join("_nidum_tools", "chatnd.py")
+    shas = _sp.run(["git", "log", "-n", "3", "--format=%H", "--", rel],
+                   capture_output=True, text=True).stdout.split()
+    if len(shas) >= 3:
+        antigo = _sp.run(["git", "show", "%s:_nidum_tools/chatnd.py" % shas[2]],
+                         capture_output=True, text=True, encoding="utf-8").stdout
+        r = CR._commit_correspondente(".", rel, CR._normalizar_fonte(antigo))
+        check("conteudo de um commit antigo -> acha a ancora",
+              r is not None and r[2] == 2)
+        check("e devolve sha curto e data", bool(r and r[0] and r[1]))
+        r2 = CR._commit_correspondente(".", rel, "conteudo que nunca existiu")
+        check("conteudo que nunca existiu no repo -> None (nao inventa ancora)",
+              r2 is None)
+    else:
+        check("(pulado: historico curto demais neste checkout)", True)
+
     print("\n== o tamanho da diferenca e HONESTO ==")
     # A primeira versao contava posicao a posicao (zip). Com UMA linha inserida
     # no topo, todas as seguintes ficam deslocadas e contam como diferentes: a
