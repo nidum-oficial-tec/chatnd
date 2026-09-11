@@ -120,6 +120,44 @@ para o código tanto quanto para o acervo.**
 
 ---
 
+## Como se publica agora (11/09/2026)
+
+O desenho deste documento nasceu para **medir** a divergência. Medida, ela expôs a
+causa — e a causa não se conserta medindo melhor.
+
+**O publish saiu da máquina de alguém.** O workflow `Publicar pipe/tools (manual)`
+sobe o código direto do repositório:
+
+- **gatilho só manual** (`workflow_dispatch`), **sem publish automático a cada merge**;
+- **simulação ligada por padrão** — só publica de verdade quem desmarcar a caixinha;
+- **um alvo por rodada**, sem opção *todos*;
+- **carimbo de origem** no `meta.description`: sha, ref e run quando sai do Actions;
+  `LOCAL, sem sha` quando sai da máquina de alguém.
+
+**O carimbo não vai no `content`, e isto não é detalhe:** esta conferência compara o
+`content` publicado com o do repo. Carimbar dentro do código faria **todo** publicado
+divergir por causa do próprio carimbo, e a conferência passaria a acusar sempre — que é
+como um alarme morre (D53). O `meta.description` é o único campo gravável que fica
+**fora** da coisa comparada.
+
+**O que a simulação diz antes de escrever:** versão dos dois lados, quantas linhas
+realmente diferem, em qual linha começa a divergência, e o aviso explícito de que o
+publish **substitui** o painel. Quando não consegue ler o publicado, ela diz isso — com
+código de saída próprio (4) — em vez de calar e deixar entender "está igual".
+
+**Uma coisa que a simulação avisa e não bloqueia:** painel e repo dizendo a **mesma
+versão** com conteúdo diferente. Foi exatamente assim que a divergência de 11/09 ficou
+invisível. Não bloqueia porque a primeira publicação do conserto cai justamente nesse
+caso (1.65.0 × 1.65.0, 1.148 linhas) — travar ali impediria a rodada que vem consertar.
+Travar o bump é trabalho do PR, onde o conserto custa uma linha (trava A).
+
+Ver **D63**.
+
+---
+
 ## Carimbo
 
-**Última verificação: 2026-09-11.** Desenho, não implementação.
+**Última verificação: 2026-09-11.** A conferência (`conferir_publicado` no
+`conferir_registros.py`) está **implementada e rodando** no workflow semanal — foi ela
+que achou as 1.148 e as 543 linhas. O publish pelo Actions está implementado e
+**nunca foi executado**: a primeira rodada, inclusive a simulação, é do Davi.

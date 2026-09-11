@@ -1,0 +1,139 @@
+# PUBLICAR o pipe/tools DIRETO DO REPOSITORIO - nao da maquina de ninguem.
+#
+# POR QUE (11/09/2026): o conferidor achou `chatnd` 1.65.0 no painel e 1.65.0 no
+# repo com 1.148 linhas realmente diferentes - e, procurando no historico
+# INTEIRO, o conteudo publicado nao correspondia a NENHUM commit que ja existiu.
+# O publicador foi descartado como causa (ele manda o arquivo verbatim). Sobrou
+# uma conclusao: o que roda nao era rastreavel ao repositorio.
+#
+# A causa nao e falta de cuidado - e o publish ser MANUAL E LOCAL. Enquanto for
+# alguem rodando comando na propria maquina, o rastro depende de disciplina. Aqui
+# o codigo sobe do proprio repositorio: "arvore suja" deixa de existir por
+# construcao e o sha vem de graca (carimbado no `meta.description`).
+#
+# NAO HA GATILHO AUTOMATICO, DE PROPOSITO. Nada de publicar a cada merge: o
+# unico gatilho e o manual, e a SIMULACAO vem LIGADA por padrao - so publica de
+# verdade quem DESMARCAR a caixinha de proposito. Mesmo desenho do
+# `sincronizar.yml` da esteira, pelo mesmo motivo.
+#
+# PUBLICAR DE UM BRANCH CONTINUA PODENDO (o dispatch deixa escolher a ref), e
+# isso e util para provar uma mudanca antes do merge. O carimbo registra QUAL ref
+# e QUAL sha - entao a rastreabilidade nao depende de a ref ser a main.
+#
+# O QUE ESTE WORKFLOW NAO FAZ: nao impede um publish local. Qualquer um com o
+# token admin ainda consegue mandar um POST. Ele torna o caminho rastreavel o
+# caminho FACIL, e o publish local passa a sair carimbado como LOCAL. Quem PEGA
+# um publish fora do repositorio e o conferidor de registros (classe
+# `publicado_divergente`) - os dois trabalham juntos; nenhum resolve sozinho.
+
+name: Publicar pipe/tools (manual)
+
+# O TITULO DA EXECUCAO marca a simulacao, como na esteira: quem olha a lista de
+# runs precisa distinguir "simulou" de "publicou" sem abrir o log.
+run-name: >-
+  publicar ${{ inputs.alvo }}${{ inputs.dry_run && ' (SIMULACAO)' || ' [PUBLICA DE VERDADE]' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      alvo:
+        description: 'O que publicar'
+        type: choice
+        required: true
+        options:
+          - chatnd
+          - gerador_de_arquivos_nidum
+          - relatorio_ambientes_nidum
+          - sharepoint_nidum
+      dry_run:
+        description: 'Simulacao: mostra o tamanho da mudanca, NAO escreve no painel'
+        type: boolean
+        default: true
+
+# UM ALVO POR RODADA, sem opcao "todos". Publicar os quatro de uma vez tripica o
+# raio de alcance de um engano e economiza dois cliques - troca ruim para uma
+# operacao que acontece poucas vezes por semana.
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publicar-${{ inputs.alvo }}
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o repositorio
+        uses: actions/checkout@v4
+        # SEM fetch-depth: 0 aqui de proposito. A simulacao compara o painel com
+        # o arquivo do topo - nao procura ancora no historico (isso e o
+        # conferidor). Trazer o repo inteiro seria custo sem uso.
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Provar a simulacao (offline)
+        # A simulacao e o que vai dizer se pode publicar. Se a prova dela cair,
+        # o resto deste job nao vale como informacao - melhor parar aqui do que
+        # publicar apoiado num "esta igual" que ninguem sabe se e verdade.
+        run: python _nidum_manutencao/teste_publicar_comum.py
+
+      - name: Publicar
+        env:
+          # OS SECRETS JA EXISTIAM. Sao os mesmos que o conferidor de registros
+          # usa para LER o `content` publicado - e ler content de function e
+          # endpoint de admin, entao a chave ja tem o direito que o publish pede.
+          # Nenhum segredo novo entrou no repositorio por causa deste workflow.
+          NIDUM_URL: ${{ secrets.OPENWEBUI_BASE_URL }}
+          NIDUM_TOKEN: ${{ secrets.OPENWEBUI_API_KEY }}
+        run: |
+          set -o pipefail
+          case "${{ inputs.alvo }}" in
+            chatnd)
+              CMD="_nidum_manutencao/publicar_pipe.py _nidum_tools/chatnd.py" ;;
+            *)
+              # publicar_tool.py e generico: tira id, nome e descricao do
+              # cabecalho do proprio arquivo - que esta no repo, que e o ponto.
+              CMD="_nidum_manutencao/publicar_tool.py _nidum_tools/${{ inputs.alvo }}.py" ;;
+          esac
+
+          SECO=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then SECO="--dry-run"; fi
+
+          set +e
+          python $CMD $SECO 2>&1 | tee "$RUNNER_TEMP/saida.txt"
+          RC=${PIPESTATUS[0]}
+          set -e
+
+          {
+            if [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo '### Simulacao - NADA foi escrito no painel'
+            else
+              echo '### PUBLICADO'
+            fi
+            echo ''
+            echo "ref \`${{ github.ref_name }}\` / sha \`${GITHUB_SHA:0:12}\`"
+            if [ "${{ github.ref_name }}" != "main" ] && [ "${{ inputs.dry_run }}" != "true" ]; then
+              echo ''
+              echo '> Publicado de uma ref que NAO e a main. E permitido (provar antes'
+              echo '> do merge), e o carimbo registra a ref e o sha - mas o painel passa'
+              echo '> a rodar codigo que ainda nao esta na main.'
+            fi
+            echo ''
+            echo '```'
+            cat "$RUNNER_TEMP/saida.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # rc 4 = simulou mas NAO conseguiu olhar o publicado. Nao e sucesso (a
+          # comparacao nao aconteceu) e nao e o mesmo que falha de publish - por
+          # isso tem codigo proprio, e aqui vira aviso visivel em vez de sumir.
+          if [ "$RC" = "4" ]; then
+            echo "::warning::a simulacao rodou mas nao conseguiu ler o que esta publicado"
+            exit 0
+          fi
+          exit $RC

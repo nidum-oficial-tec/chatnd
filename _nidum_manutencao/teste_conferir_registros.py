@@ -254,6 +254,34 @@ def main():
     check("e NUNCA imprime o codigo (fonte tem valve e chave dentro)",
           "def f()" not in str(a))
 
+    # O CARIMBO DE ORIGEM (D63): quando existe, o achado diz de onde veio o
+    # publish - de graca, e inclusive nos casos em que a ancora no historico nao
+    # responde (publish de branch, ou de codigo que nunca virou commit).
+    a = CR.conferir_publicado(
+        raiz, pub, leitor=lambda t, i: (FONTE + "# hotfix\n", None),
+        carimbeiro=lambda t, i: "[origem: repo abc123def456 ref main run 9]")
+    check("carimbo presente -> aparece no achado",
+          len(a) == 1 and "abc123def456" in a[0]["detalhe"])
+
+    # A AUSENCIA TAMBEM INFORMA - e por isso "" nao pode virar silencio: sem
+    # carimbo, o publish e anterior a D63 ou veio por fora do publicador.
+    a = CR.conferir_publicado(
+        raiz, pub, leitor=lambda t, i: (FONTE + "# hotfix\n", None),
+        carimbeiro=lambda t, i: "")
+    check("sem carimbo -> o achado DIZ que nao ha",
+          len(a) == 1 and "SEM carimbo" in a[0]["detalhe"])
+
+    # Carimbeiro que explode nao derruba a classe: o achado sai sem a linha do
+    # carimbo, e nao some.
+    def _explode(t, i):
+        raise RuntimeError("painel fora do ar")
+
+    a = CR.conferir_publicado(
+        raiz, pub, leitor=lambda t, i: (FONTE + "# hotfix\n", None),
+        carimbeiro=_explode)
+    check("carimbeiro que quebra nao derruba o achado",
+          len(a) == 1 and a[0]["classe"] == "publicado_divergente")
+
     a = CR.conferir_publicado(raiz, pub, leitor=lambda t, i: ("", None))
     check("nao publicada -> publicado_ausente",
           len(a) == 1 and a[0]["classe"] == "publicado_ausente")

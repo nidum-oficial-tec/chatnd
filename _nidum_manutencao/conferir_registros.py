@@ -410,6 +410,53 @@ def _publicado_do_painel(tipo, ident, _cache={}):
     return "", None                      # nao publicada: string vazia, nao None
 
 
+_RE_CARIMBO = re.compile(r"\[origem:[^\]]{0,120}\]")
+
+
+def _carimbo_do_painel(tipo, ident, _cache={}):
+    """O carimbo `[origem: ...]` que o publish deixou no `meta.description`.
+
+    DESDE A D63 todo publish carimba de onde veio: sha/ref/run quando sai do
+    Actions, "LOCAL" quando sai da maquina de alguem. Ler isso responde de
+    imediato a pergunta que o `_commit_correspondente` responde caro (varrendo
+    500 commits) - e responde tambem o caso em que ele NAO responde: um publish
+    de branch, ou de codigo que nunca virou commit.
+
+    A AUSENCIA TAMBEM INFORMA, e por isso "" nao e tratado como nada: sem
+    carimbo, o publish e anterior a D63 ou veio por fora do publicador.
+
+    POR QUE NAO APROVEITA O `_publicado_do_painel`: aquele devolve (fonte,
+    motivo) e e INJETAVEL nos testes (`leitor=`). Mudar o contrato dele para
+    carregar mais um campo quebraria a injecao onde ela ja prova seis casos.
+    Uma leitura a mais custa uma chamada; mudar um contrato provado custa mais.
+    """
+    base = os.environ.get("OPENWEBUI_BASE_URL")
+    chave = os.environ.get("OPENWEBUI_API_KEY")
+    if not base or not chave:
+        return None
+    import urllib.request
+
+    def _pegar(caminho):
+        req = urllib.request.Request(base.rstrip("/") + caminho,
+                                     headers={"Authorization": "Bearer " + chave})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return json.loads(r.read().decode())
+
+    if tipo == "funcao":
+        d = _pegar("/api/v1/functions/id/" + ident)
+        itens = [d] if isinstance(d, dict) else []
+    else:
+        if "export" not in _cache:
+            _cache["export"] = _pegar("/api/v1/tools/export")
+        itens = [t for t in (_cache["export"] or [])
+                 if isinstance(t, dict) and str(t.get("id") or "").strip() == ident]
+    for it in itens:
+        desc = ((it.get("meta") or {}).get("description") or "")
+        m = _RE_CARIMBO.search(desc)
+        return m.group(0) if m else ""
+    return None
+
+
 def _commit_correspondente(plataforma, rel, publicado_norm, limite=500):
     """Qual commit do repo tem EXATAMENTE o conteudo que esta publicado?
 
@@ -498,7 +545,7 @@ def _tamanho_da_diferenca(a, b):
     return dif, primeira
 
 
-def conferir_publicado(plataforma, publicados=None, leitor=None):
+def conferir_publicado(plataforma, publicados=None, leitor=None, carimbeiro=None):
     """Painel x repo, para cada artefato publicado por API.
 
     TRES COMPARACOES EM ORDEM, e a ordem importa porque a primeira que diverge
@@ -511,6 +558,7 @@ def conferir_publicado(plataforma, publicados=None, leitor=None):
     NAO IMPRIME O CODIGO em nenhum achado: e fonte com valve e chave dentro.
     """
     ler = leitor or _publicado_do_painel
+    carimbeiro = carimbeiro or _carimbo_do_painel
     achados = []
     conferidos = identicos = 0
     for tipo, ident, rel in (publicados or _PUBLICADOS):
@@ -559,6 +607,15 @@ def conferir_publicado(plataforma, publicados=None, leitor=None):
             onde = ("o conteudo publicado NAO corresponde a nenhum commit recente "
                     "do repo - foi editado fora do repositorio, ou e mais antigo "
                     "que a janela conferida")
+        # O CARIMBO DO PUBLISH (D63) responde de graca o que a ancora responde
+        # caro - e responde tambem onde ela nao alcanca (publish de branch, ou de
+        # codigo que nunca virou commit). Ausencia tambem informa.
+        carimbo = _seguro(carimbeiro, tipo, ident)
+        if carimbo:
+            onde = "%s. Carimbo do publish: %s" % (onde, carimbo)
+        elif carimbo == "":
+            onde = ("%s. SEM carimbo de origem: publicado antes da D63, ou por "
+                    "fora do publicador." % onde)
         achados.append(_achado(
             "publicado_divergente",
             "%s %r: painel version=%s x repo version=%s "
