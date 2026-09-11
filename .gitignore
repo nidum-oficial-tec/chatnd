@@ -327,5 +327,8 @@ backup/
 # acidente em 05/09, num `git add -A` que eu nao devia ter usado.
 _nidum_manutencao/relatorio_*.txt
 _nidum_manutencao/*_dryrun.txt
-_diff_pub_vs_main.txt
+# O diff agora sai por alvo (_diff_pub_vs_main_<id>.txt). O nome exato
+# antigo nao cobria os novos - e o arquivo carrega o FONTE publicado, com
+# valve e possivelmente chave dentro. Curinga, e nao nome fixo.
+_diff_pub_vs_main*.txt
 _publicado_*.py

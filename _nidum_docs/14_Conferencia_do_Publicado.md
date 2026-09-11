@@ -130,7 +130,10 @@ sobe o código direto do repositório:
 
 - **gatilho só manual** (`workflow_dispatch`), **sem publish automático a cada merge**;
 - **simulação ligada por padrão** — só publica de verdade quem desmarcar a caixinha;
-- **um alvo por rodada**, sem opção *todos*;
+- **um alvo por rodada**, sem opção *todos* — **o raio de alcance de um engano vale
+  mais que dois cliques**: publicar os quatro de uma vez triplica o que uma rodada
+  errada atinge, e economiza dois cliques numa operação que acontece poucas vezes
+  por semana. Troca ruim;
 - **carimbo de origem** no `meta.description`: sha, ref e run quando sai do Actions;
   `LOCAL, sem sha` quando sai da máquina de alguém.
 
@@ -149,7 +152,9 @@ código de saída próprio (4) — em vez de calar e deixar entender "está igua
 versão** com conteúdo diferente. Foi exatamente assim que a divergência de 11/09 ficou
 invisível. Não bloqueia porque a primeira publicação do conserto cai justamente nesse
 caso (1.65.0 × 1.65.0, 1.148 linhas) — travar ali impediria a rodada que vem consertar.
-Travar o bump é trabalho do PR, onde o conserto custa uma linha (trava A).
+Travar o bump é trabalho do PR, onde o conserto custa uma linha (trava A). Ver
+**D64**, que guarda o caso concreto — uma trava desenhada a partir de um incidente
+precisa ser testada contra o **conserto** do incidente, não só contra o incidente.
 
 Ver **D63**.
 
