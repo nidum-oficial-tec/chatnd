@@ -410,6 +410,41 @@ def _publicado_do_painel(tipo, ident, _cache={}):
     return "", None                      # nao publicada: string vazia, nao None
 
 
+def _commit_correspondente(plataforma, rel, publicado_norm, limite=40):
+    """Qual commit do repo tem EXATAMENTE o conteudo que esta publicado?
+
+    RESPONDE A PERGUNTA QUE O TAMANHO DA DIFERENCA NAO RESPONDE: "qual lado esta
+    a frente?". Saber que 1.148 linhas diferem nao diz se o painel esta atrasado
+    (e quanto) ou se alguem editou producao pela tela - e as duas exigem acoes
+    opostas.
+
+    Se o publicado casa com um commit antigo, o painel esta simplesmente ATRAS, e
+    a distancia e contavel. Se nao casa com NENHUM, o conteudo publicado nunca
+    existiu no repositorio - e ai a conversa e outra.
+
+    Devolve (sha_curto, data, quantos_commits_atras) ou None. Nao imprime codigo.
+    """
+    import subprocess
+    def _git(*a):
+        return subprocess.run(["git"] + list(a), cwd=plataforma, capture_output=True,
+                              text=True, encoding="utf-8", errors="replace").stdout
+    saida = _git("log", "-n", str(limite), "--format=%H|%h|%ad", "--date=short",
+                 "--", rel)
+    for n, linha in enumerate((saida or "").strip().split(chr(10))):
+        if not linha.strip():
+            continue
+        partes = linha.split("|")
+        if len(partes) < 3:
+            continue
+        sha, curto, data = partes[0], partes[1], partes[2]
+        conteudo = _git("show", "%s:%s" % (sha, rel.replace(os.sep, "/")))
+        if not conteudo:
+            continue
+        if _normalizar_fonte(conteudo) == publicado_norm:
+            return (curto, data, n)
+    return None
+
+
 def _tamanho_da_diferenca(a, b):
     """(linhas realmente diferentes, numero da 1a divergencia). PURA.
 
@@ -488,12 +523,21 @@ def conferir_publicado(plataforma, publicados=None, leitor=None):
             continue
         v_painel, v_repo = _versao_de(fonte), _versao_de(no_repo)
         dif, primeira = _tamanho_da_diferenca(a, b)
+        # QUAL LADO ESTA A FRENTE - a pergunta que o tamanho nao responde.
+        ancora = _seguro(_commit_correspondente, plataforma, rel, a)
+        if ancora:
+            onde = ("o painel e o commit %s de %s, %d commit(s) atras do repo"
+                    % (ancora[0], ancora[1], ancora[2]))
+        else:
+            onde = ("o conteudo publicado NAO corresponde a nenhum commit recente "
+                    "do repo - foi editado fora do repositorio, ou e mais antigo "
+                    "que a janela conferida")
         achados.append(_achado(
             "publicado_divergente",
             "%s %r: painel version=%s x repo version=%s "
-            "(%d linha(s) realmente diferentes; 1a divergencia na linha %s)"
+            "(%d linha(s) realmente diferentes; 1a divergencia na linha %s). %s"
             % (tipo, ident, v_painel or "?", v_repo or "?", dif,
-               primeira if primeira is not None else "?"),
+               primeira if primeira is not None else "?", onde),
             rel,
             "o que roda nao e o que esta escrito; todo diagnostico do produto "
             "parte da suposicao contraria"))
