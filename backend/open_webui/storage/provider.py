@@ -29,12 +29,44 @@ from open_webui.config import (
     S3_REGION_NAME,
     S3_SECRET_ACCESS_KEY,
     S3_USE_ACCELERATE_ENDPOINT,
+    STORAGE_LOCAL_CACHE,
     STORAGE_PROVIDER,
     UPLOAD_DIR,
 )
 from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
+
+
+def cleanup_local_cache(file_path: str) -> None:
+    """Remove a copia local de um arquivo que vive na nuvem.
+
+    ONDE ISTO MORA E POR QUE AQUI: a funcao existia em routers/files.py, chamada
+    de UM lugar so (o fim do processamento de upload). Ela e sobre ARMAZENAMENTO,
+    nao sobre rota, e os outros pontos que deixam copia para tras estao noutros
+    modulos - o upload ao S3 (logo abaixo), o loader do retrieval e as respostas
+    de download. Uma definicao, varias chamadas.
+
+    A GUARDA E DUPLA, e as duas metades sao obrigatorias:
+
+      STORAGE_PROVIDER == "local"  -> o arquivo local E o arquivo. Apagar aqui
+                                      seria destruir a unica copia.
+      STORAGE_LOCAL_CACHE == True  -> o operador pediu cache local de proposito.
+
+    ATENCAO AO PADRAO (10/09/2026): STORAGE_LOCAL_CACHE tem default "true", entao
+    a limpeza vem DESLIGADA de fabrica. O mecanismo existia, estava correto, era
+    chamado - e nao fazia nada, porque o default o desliga. Ligar e mudar a
+    variavel de ambiente, e isso e decisao de operacao, nao deste PR.
+    """
+    if STORAGE_LOCAL_CACHE or STORAGE_PROVIDER == "local":
+        return
+    try:
+        local_path = os.path.join(UPLOAD_DIR, os.path.basename(file_path))
+        if os.path.isfile(local_path):
+            os.remove(local_path)
+            log.debug(f"Cleaned up local cache: {local_path}")
+    except OSError as e:
+        log.warning(f"Failed to clean up local cache for {file_path}: {e}")
 
 
 class StorageProvider(ABC):
@@ -152,6 +184,11 @@ class S3StorageProvider(StorageProvider):
                     Key=s3_key,
                     Tagging=tagging,
                 )
+            # O S3 JA TEM O ARQUIVO - a copia local acabou de virar lixo. Ate
+            # aqui ela ficava no volume para sempre: LocalStorageProvider.
+            # upload_file grava em UPLOAD_DIR, o upload sobe, e ninguem apagava.
+            # So depois do upload OK, e nunca dentro do try de escrita.
+            cleanup_local_cache(file_path)
             return (
                 contents,
                 f's3://{self.bucket_name}/{s3_key}',
