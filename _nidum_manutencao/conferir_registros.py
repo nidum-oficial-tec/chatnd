@@ -364,6 +364,7 @@ def conferir_publicado(plataforma, publicados=None, leitor=None):
     """
     ler = leitor or _publicado_do_painel
     achados = []
+    conferidos = identicos = 0
     for tipo, ident, rel in (publicados or _PUBLICADOS):
         caminho = os.path.join(plataforma, rel)
         no_repo = _ler(caminho)
@@ -391,8 +392,10 @@ def conferir_publicado(plataforma, publicados=None, leitor=None):
                 "codigo que ninguem publicou nao roda - e quem le o repo supoe "
                 "que roda"))
             continue
+        conferidos += 1
         a, b = _normalizar_fonte(fonte), _normalizar_fonte(no_repo)
         if a == b:
+            identicos += 1
             continue
         v_painel, v_repo = _versao_de(fonte), _versao_de(no_repo)
         dif = sum(1 for x, y in zip(a.split("\n"), b.split("\n")) if x != y)
@@ -404,6 +407,15 @@ def conferir_publicado(plataforma, publicados=None, leitor=None):
             rel,
             "o que roda nao e o que esta escrito; todo diagnostico do produto "
             "parte da suposicao contraria"))
+    # CONTA EM VOZ ALTA o que conferiu, mesmo quando esta tudo igual.
+    #
+    # POR QUE: a primeira rodada desta classe voltou SILENCIOSA, e silencio tem
+    # dois significados incompativeis - "conferi os quatro e batem" e "nao rodei".
+    # Sem esta linha, distinguir os dois exigiria ler o codigo; foi exatamente o
+    # que custou dias no /api/v1/models/ e o que o D37 descreve. Alarme que so
+    # fala quando ha problema nao prova que olhou.
+    print("  publicado x repo: %d conferido(s), %d identico(s)"
+          % (conferidos, identicos))
     return achados
 
 
