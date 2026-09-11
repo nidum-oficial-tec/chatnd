@@ -76,17 +76,61 @@ def _pegar(caminho, tok):
         return json.loads(r.read().decode("utf-8", "replace"))
 
 
+def _quem(user_id, tok, _cache={}):
+    """Nome de quem consta como dono do objeto publicado. Best-effort.
+
+    O painel GUARDA autoria (`user_id`) e data (`updated_at`) - conferido nos
+    modelos: FunctionModel e ToolModel tem os tres campos. Entao "quem pos isso
+    em producao" e uma pergunta RESPONDIVEL, e nao precisava ter virado
+    arqueologia de diff.
+
+    Se a consulta de usuario falhar, devolve o id cru: um id opaco ainda
+    identifica; inventar "desconhecido" perderia a unica pista.
+    """
+    if not user_id:
+        return "(sem user_id)"
+    if user_id not in _cache:
+        try:
+            d = _pegar("/api/v1/users/" + user_id, tok)
+            _cache[user_id] = (d or {}).get("name") or (d or {}).get("email") or user_id
+        except Exception:
+            _cache[user_id] = user_id
+    return _cache[user_id]
+
+
+def _data(epoch):
+    if not epoch:
+        return "?"
+    import datetime
+    try:
+        return datetime.datetime.utcfromtimestamp(int(epoch)).strftime("%Y-%m-%d %H:%M UTC")
+    except Exception:
+        return str(epoch)
+
+
 def publicado(ident, tipo, tok, _cache={}):
-    """O `content` no ar. Tools vem do /export - /tools/id/{id} NAO traz content."""
+    """O `content` no ar, mais QUEM e QUANDO. (fonte, meta, autoria).
+
+    Tools vem do /export - /tools/id/{id} NAO traz content.
+    """
+    obj = None
     if tipo == "funcao":
-        d = _pegar("/api/v1/functions/id/" + ident, tok)
-        return (d or {}).get("content") or "", (d or {}).get("meta") or {}
-    if "export" not in _cache:
-        _cache["export"] = _pegar("/api/v1/tools/export", tok)
-    for t in (_cache["export"] or []):
-        if isinstance(t, dict) and str(t.get("id") or "").strip() == ident:
-            return t.get("content") or "", t.get("meta") or {}
-    return "", {}
+        obj = _pegar("/api/v1/functions/id/" + ident, tok)
+    else:
+        if "export" not in _cache:
+            _cache["export"] = _pegar("/api/v1/tools/export", tok)
+        for t in (_cache["export"] or []):
+            if isinstance(t, dict) and str(t.get("id") or "").strip() == ident:
+                obj = t
+                break
+    if not isinstance(obj, dict):
+        return "", {}, {}
+    autoria = {
+        "quem": _quem(obj.get("user_id"), tok),
+        "atualizado": _data(obj.get("updated_at")),
+        "criado": _data(obj.get("created_at")),
+    }
+    return obj.get("content") or "", obj.get("meta") or {}, autoria
 
 
 def do_repo(rel, ref="origin/main"):
@@ -103,7 +147,7 @@ def _versao(t):
 def conferir(ident, ref):
     tipo, rel = ALVOS[ident]
     tok = _token()
-    pub, meta = publicado(ident, tipo, tok)
+    pub, meta, autoria = publicado(ident, tipo, tok)
     if not pub:
         print("%-26s NAO ESTA PUBLICADO no painel." % ident)
         return
@@ -127,6 +171,17 @@ def conferir(ident, ref):
 
     saida_src = "_publicado_%s.py" % ident
     saida_diff = "_diff_pub_vs_main_%s.txt" % ident
+    # NAO SOBRESCREVE UM RETRATO ANTERIOR - ele e PROVA, nao rascunho.
+    #
+    # Em 11/09 o retrato de 05/09 que estava no disco (365.233 bytes) datou a
+    # divergencia: o publicado de hoje tem 373.947, e a diferenca de 8.714 bytes
+    # apareceu em producao numa janela em que NINGUEM publicou pelo repo. Isso
+    # transformou "1.148 linhas para revisar" em "o que entrou depois de 05/09".
+    # Um `w` em cima teria apagado a unica coisa capaz de datar a mudanca.
+    if os.path.isfile(saida_src):
+        anterior = "_publicado_%s.ANTERIOR.py" % ident
+        os.replace(saida_src, anterior)
+        print("   (retrato anterior preservado em %s)" % anterior)
     io.open(saida_src, "w", encoding="utf-8", newline="").write(pub)
     diff = list(difflib.unified_diff(rl, pl, "repo:" + ref, "publicado",
                                      lineterm="", n=3))
@@ -144,6 +199,10 @@ def conferir(ident, ref):
           % (so_no_pub, so_no_repo))
     print("   carimbo de origem: %s" % (carimbo or "NENHUM (publicado antes da D63, "
                                                    "ou por fora do publicador)"))
+    # QUEM E QUANDO - o painel guarda, e sem isso "o repo esta atras" nao diz de
+    # quem e o trabalho que esta so em producao nem quando ele entrou.
+    print("   ultima gravacao : %s  por %s"
+          % (autoria.get("atualizado", "?"), autoria.get("quem", "?")))
     print("   fonte publicada -> %s" % saida_src)
     print("   diff            -> %s" % saida_diff)
     print("")
