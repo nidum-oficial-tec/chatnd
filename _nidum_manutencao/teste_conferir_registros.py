@@ -300,6 +300,45 @@ def main():
 
     shutil.rmtree(raiz, ignore_errors=True)
 
+    print("")
+    print("== raiz_divergente: a copia viva do CLAUDE.md x a versionada (D78) ==")
+    import tempfile
+    _raiz = tempfile.mkdtemp()
+    _CORPO = "# ChatND - instrucoes" + chr(10) + chr(10) + "linha um" + chr(10) + "linha dois" + chr(10)
+    _CAB = "<!-- COPIA CANONICA -->" + chr(10) + chr(10) + "> so a versionada tem" + chr(10) + chr(10) + "---" + chr(10) + chr(10)
+
+    def _esc(nome, txt):
+        c = os.path.join(_raiz, nome)
+        with open(c, "w", encoding="utf-8") as f:
+            f.write(txt)
+        return c
+
+    _viva = _esc("viva.md", _CORPO)
+    _igual = _esc("igual.md", _CAB + _CORPO)
+    _dif = _esc("dif.md", _CAB + _CORPO.replace("linha dois", "linha DOIS mudada"))
+
+    a, m = CR.conferir_claude_raiz(None, viva=_viva, canonica=_igual)
+    check("copias iguais -> sem achado (o cabecalho nao conta)", a == [] and m is None)
+
+    a, m = CR.conferir_claude_raiz(None, viva=_viva, canonica=_dif)
+    check("copias diferentes -> raiz_divergente",
+          bool(a) and a[0]["classe"] == "raiz_divergente")
+    check("e o achado diz QUAL das duas sobrevive",
+          bool(a) and "sobrevive" in a[0]["detalhe"])
+
+    # O ESTADO QUE DA NOME A CLASSE: no CI a copia viva nao existe. Devolver []
+    # ali seria dizer "conferi e batem" sobre comparacao que nao aconteceu.
+    a, m = CR.conferir_claude_raiz(None, viva=os.path.join(_raiz, "nao_existe.md"),
+                                   canonica=_igual)
+    check("copia viva ausente -> NAO CONFERIDA (nunca 'batem')", a is None and bool(m))
+    check("e o motivo diz que e normal no CI", bool(m) and "CI" in m)
+
+    a, m = CR.conferir_claude_raiz(None, viva=_viva,
+                                   canonica=os.path.join(_raiz, "nao_existe.md"))
+    check("versionada ausente -> NAO CONFERIDA", a is None and bool(m))
+
+    shutil.rmtree(_raiz, ignore_errors=True)
+
     print("\n== o formato do achado e o mesmo das classes antigas ==")
     a = CR.conferir_frac_catastrofe("0.35")[0]
     for campo in ("classe", "detalhe", "onde", "consequencia"):
