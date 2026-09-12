@@ -33,6 +33,7 @@ Há ainda uma segunda frente em construção dentro do mesmo projeto: a **frente
 | **[07_Diario_e_Status](07_Diario_e_Status.md)** | Estado atual: pronto, em andamento, bloqueado | Para saber onde o projeto está hoje |
 | **[08_Decisoes_e_Pendencias](08_Decisoes_e_Pendencias.md)** | Decisões já tomadas (e por quê) e o que falta decidir | Ao retomar o projeto ou decidir algo |
 | **[09_Dominio_Nidum](09_Dominio_Nidum.md)** | Glossário do "jeito Nidum": motores, etiquetas, tríade, Intenção Reta | Para entender os termos próprios da Nidum |
+| **[15_Operar_Sozinho](15_Operar_Sozinho.md)** | O que fazer quando a esteira para, um alarme dispara ou a resposta sai errada | **Quando algo quebra e o Claude não está** |
 
 ## Como rodar / acessar (resumo)
 
