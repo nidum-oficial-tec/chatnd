@@ -11,7 +11,7 @@
 # DUAS CLASSES DEPENDEM DE COISAS QUE ESTE REPO NAO TEM, e o relatorio DIZ quando
 # nao as conferiu, em vez de contar como "nada encontrado":
 #   - id_fantasma e fixture_vencida precisam do repo da ESTEIRA. Sem o secret
-#     ESTEIRA_TOKEN (um PAT com leitura em nidum-chatnd-basefonte) elas ficam de
+#     ESTEIRA_TOKEN (um PAT com leitura em chatnd-conhecimento) elas ficam de
 #     fora.
 #   - base_indevida precisa das credenciais da base (OPENWEBUI_*), que hoje moram
 #     so no repo da esteira.
@@ -72,7 +72,7 @@ jobs:
           # confianca de quem le o log.
           EST="$GITHUB_WORKSPACE/_esteira"
           if [ -n "$ESTEIRA_TOKEN" ]; then
-            git clone --depth 1 --quiet "https://x-access-token:$ESTEIRA_TOKEN@github.com/nidum-oficial-tec/nidum-chatnd-basefonte.git" "$EST" && echo "esteira clonada" || echo "CLONE FALHOU"
+            git clone --depth 1 --quiet "https://x-access-token:$ESTEIRA_TOKEN@github.com/nidum-oficial-tec/chatnd-conhecimento.git" "$EST" && echo "esteira clonada" || echo "CLONE FALHOU"
           else
             echo "sem ESTEIRA_TOKEN - duas classes ficam de fora"
           fi

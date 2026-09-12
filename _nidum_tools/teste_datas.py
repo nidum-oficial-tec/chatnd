@@ -5,7 +5,7 @@ chatnd.py). Exercita so a funcao PURA - nao faz rede, nao busca, nao toca na bas
 Sai != 0 se qualquer caso decidir errado.
 
 Por que aqui e nao no teste_freios.py da esteira: aquele arquivo vive em OUTRO
-repositorio (nidum-chatnd-basefonte) e nao consegue importar o chatnd.py, que depende
+repositorio (chatnd-conhecimento) e nao consegue importar o chatnd.py, que depende
 do open_webui. Aqui stubamos o open_webui (MagicMock) so para conseguir importar o
 modulo e testar as funcoes puras - nenhum codigo do app e executado.
 

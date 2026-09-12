@@ -16,7 +16,7 @@
         tool gerador_de_arquivos_nidum, tool nidum_fonte_quadro_de_pessoas (+ valves)
 - [ ] CUTOVER (agendado; fazer em horario de baixo uso).
 
-## Variaveis a setar no servico `nidum-platform` (Railway)
+## Variaveis a setar no servico `ChatND` (Railway)
 | Variavel | Valor | Quem | Segredo? |
 |---|---|---|---|
 | `DATABASE_URL` | referencia `${{Postgres.DATABASE_URL}}` | usuario (painel) | interna |
@@ -29,7 +29,7 @@
 | `S3_SECRET_ACCESS_KEY` | (do .env.local R2_SECRET_ACCESS_KEY) | CLI ou painel | SIM |
 
 > `PGVECTOR_DB_URL` nao precisa: por padrao usa `DATABASE_URL`.
-> As nao-secretas dao para setar via `railway variables --set "K=V"` (servico nidum-platform, env production).
+> As nao-secretas dao para setar via `railway variables --set "K=V"` (servico ChatND, env production).
 
 ## Passo a passo
 1. [x] Backup Fonte + config + funcoes/tools (feito).

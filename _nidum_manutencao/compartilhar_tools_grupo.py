@@ -9,7 +9,7 @@ TRAVA DE SEGURANCA: por padrao SO PRE-VISUALIZA. Para aplicar de verdade:
   $env:NIDUM_CONFIRMAR = "SIM"
 
 USO:
-  cd "C:\\Users\\daviv\\dev\\nidum-platform"
+  cd "C:\\Users\\daviv\\Claude\\Projects\\ChatND\\interface-chatnd"
   $env:NIDUM_URL="https://chatnd.nidumbrasil.com.br"; $env:NIDUM_TOKEN="SEU_TOKEN_ADMIN"
   py _nidum_manutencao/compartilhar_tools_grupo.py            # pre-visualiza
   $env:NIDUM_CONFIRMAR="SIM"; py _nidum_manutencao/compartilhar_tools_grupo.py
