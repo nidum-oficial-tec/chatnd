@@ -605,6 +605,71 @@ def conferir_config_producao():
     return achados, None
 
 
+def conferir_claude_raiz(esteira, viva=None, canonica=None):
+    """A copia VIVA do CLAUDE.md da raiz x a VERSIONADA. Classe `raiz_divergente`.
+
+    POR QUE EXISTE (D78, 12/09/2026): o `CLAUDE.md` que o Claude Code carrega em
+    toda sessao vive na RAIZ da area de trabalho, fora dos dois repositorios -
+    porque e a pasta-mae das duas frentes, e so dali vale para as duas ao mesmo
+    tempo. Fora de git, ele sumiria com a maquina; por isso ha uma copia
+    canonica em `chatnd-conhecimento/_docs/CLAUDE_raiz.md`.
+
+    DUAS COPIAS SAO DUAS VERDADES (D73) enquanto ninguem as compara. A viva e a
+    que orienta o trabalho; a versionada e a que sobrevive. Se divergirem, a que
+    sobrevive esta errada - e o erro so aparece no dia em que ela for usada, que
+    e o pior dia possivel para descobrir.
+
+    O ESTADO "NAO CONFERIDA" E O PONTO DESTA CLASSE, e nao um detalhe. Nenhum CI
+    enxerga arquivo fora do repositorio: no runner, a copia viva simplesmente nao
+    existe. Uma classe que, nesse caso, devolvesse "nada encontrado" estaria
+    dizendo "conferi e batem" sobre uma comparacao que nao aconteceu - que e a
+    forma mais silenciosa de um conferidor mentir (D57). Aqui ela diz que nao
+    conferiu.
+
+    Compara o conteudo ABAIXO do cabecalho da copia versionada: o cabecalho e
+    proposital e so existe nela.
+    """
+    # Caminhos INJETAVEIS (sem mudar a chamada de producao): sem isto a funcao so
+    # se prova na maquina que tem as duas copias, que e a unica onde ela ja
+    # funciona. Testar o caminho que NAO existe no CI e o ponto.
+    viva = viva or os.path.join(os.path.dirname(_PLATAFORMA), "CLAUDE.md")
+    canonica = canonica or os.path.join(esteira or "", "_docs", "CLAUDE_raiz.md")
+    if not os.path.isfile(viva):
+        return None, ("a copia VIVA (%s) nao existe neste ambiente - normal no CI, "
+                      "onde so o repositorio e clonado" % viva)
+    if not os.path.isfile(canonica):
+        return None, "a copia versionada (_docs/CLAUDE_raiz.md) nao esta ao alcance"
+
+    t_viva = _ler(viva)
+    t_can = _ler(canonica)
+    if not t_viva or not t_can:
+        return None, "uma das copias veio vazia"
+
+    # O corpo comeca no titulo; tudo acima e o cabecalho que so a canonica tem.
+    marca = "# ChatND"
+    pos = t_can.find(marca)
+    corpo_can = t_can[pos:] if pos >= 0 else t_can
+    pos_v = t_viva.find(marca)
+    corpo_viva = t_viva[pos_v:] if pos_v >= 0 else t_viva
+
+    if _normalizar_fonte(corpo_viva) == _normalizar_fonte(corpo_can):
+        print("  CLAUDE.md da raiz: as duas copias batem")
+        return [], None
+
+    dif, primeira = _tamanho_da_diferenca(_normalizar_fonte(corpo_viva),
+                                          _normalizar_fonte(corpo_can))
+    return [_achado(
+        "raiz_divergente",
+        "o CLAUDE.md da raiz (copia VIVA) e a copia versionada em "
+        "_docs/CLAUDE_raiz.md diferem em %d linha(s) (1a divergencia na linha %s). "
+        "A viva e a que orienta o trabalho; a versionada e a que sobrevive a troca "
+        "de maquina - divergentes, a que sobrevive esta errada."
+        % (dif, primeira if primeira is not None else "?"),
+        "CLAUDE.md (raiz) x chatnd-conhecimento/_docs/CLAUDE_raiz.md",
+        "backup que envelhece em silencio so e descoberto no dia em que e usado"),
+    ], None
+
+
 def conferir_publicado(plataforma, publicados=None, leitor=None, carimbeiro=None):
     """Painel x repo, para cada artefato publicado por API.
 
@@ -1128,6 +1193,18 @@ def conferir(plataforma=None, esteira=None):
     # Ausente NAO acusa - sem variavel vale o padrao do workflow, que ja e 0,25.
     achados.extend(conferir_frac_catastrofe(os.environ.get("FRAC_CATASTROFE")))
     # D67 ponto 4: configuracao ausente entra AQUI, e nao num log que ninguem le.
+    # D78: as duas copias do CLAUDE.md da raiz. No CI a viva nao existe, e a
+    # classe DIZ isso em vez de contar como limpa.
+    _raiz, _m_raiz = _seguro(conferir_claude_raiz, esteira) or (None, "a coleta explodiu")
+    if _raiz is None:
+        achados.append(_achado(
+            "nao_conferido",
+            "raiz_divergente NAO foi conferida: %s" % (_m_raiz or "?"),
+            "ambiente de execucao",
+            "classe nao conferida contada como limpa e a forma mais silenciosa "
+            "de um conferidor mentir"))
+    else:
+        achados.extend(_raiz)
     _cfg, _motivo = _seguro(conferir_config_producao) or (None, "a coleta explodiu")
     if _cfg is None:
         achados.append(_achado(
@@ -1225,6 +1302,7 @@ def conferir(plataforma=None, esteira=None):
 
 
 _TITULOS = {
+    "raiz_divergente": "O CLAUDE.md DA RAIZ DIVERGIU DA COPIA VERSIONADA",
     "config_ausente": "CONFIGURACAO QUE PRODUCAO NAO TEM",
     "valve_fantasma": "Valves que a doc descreve e o codigo nao tem",
     "valve_nao_documentada": "Valves do codigo que a doc nao descreve",

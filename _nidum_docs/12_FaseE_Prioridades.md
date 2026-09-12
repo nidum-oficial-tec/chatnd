@@ -56,6 +56,8 @@ na origem**, em vez de portar o defeito.
 
 ## Alto valor — o agente pode fazer diferente, mas precisa fazer
 
+> **Dois dos quatro saíram (D79).** O #8 e o #9 foram descartados em 12/09/2026. A leitura de *alto valor* media o custo de **perder** o recurso, não a **necessidade** dele — e só a segunda decide escopo de corte. O texto deles fica abaixo, marcado, porque a razão pela qual entraram continua sendo informação para quem reabrir.
+
 **#3 · Etiquetas de procedência no contexto.** As cotas e o `MAX_CHARS_TOTAL` são
 mecânica de pipe e podem morrer; **as etiquetas, não.** São elas que sustentam a parede
 geral × documentos (D23) — o agente declara a procedência e por isso pode ver as duas
@@ -65,10 +67,10 @@ fontes sem misturá-las. Sem etiqueta, a parede vira promessa.
 orçamento **e** de foco: quem anexa um documento quer falar dele. No laço agêntico o
 modelo decide quando buscar, então a regra precisa virar **instrução**, não corte.
 
-**#8 · Áudio anexado (Whisper local).** Entrada por voz é uso real e o Whisper já está
+**#8 · Áudio anexado (Whisper local) — DESCARTADO (12/09/2026, D79).** Entrada por voz é uso real e o Whisper já está
 no volume. Barato de manter, caro de perder.
 
-**#9 · Saída de voz.** Player, keepalive SSE, cancelamento limpo, retenção de 30 dias.
+**#9 · Saída de voz — DESCARTADO (12/09/2026, D79).** Player, keepalive SSE, cancelamento limpo, retenção de 30 dias.
 Mais trabalhoso que o #8 e menos usado — mas é o item que mais "aparece" se sumir.
 
 ---
