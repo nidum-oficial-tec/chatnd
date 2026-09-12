@@ -1,9 +1,28 @@
 """
 title: ChatND
 author: Nidum
-version: 1.66.0
+version: 1.66.1
 description: Roteador automatico. Classifica o pedido (gpt-5-mini) e encaminha para o modelo NIDUM adequado. Na rota de documentos faz RAG da base institucional. Na rota de arquivo, gera a estrutura com gpt-5.1 e chama a ferramenta gerador_de_arquivos_nidum (inclusive com imagens anexadas pelo usuario). Na rota de imagem, gera a imagem via Gemini (motor oculto). Audio anexado e transcrito (Whisper local) e vira o pedido, roteado como texto. O usuario nao escolhe o motor.
 changelog:
+  1.66.1:
+    - OS CONTADORES DA 1.66.0 NAO CHEGAVAM AO BANCO. `recusa_tool`, `recusa_salva`
+      e `recusa_final` foram escritos em `_ev` e nunca acrescentados ao CREATE
+      TABLE, ao ALTER nem ao INSERT - que tem lista de colunas EXPLICITA. O pipe
+      escrevia num dicionario lido chave a chave por uma lista fixa, e as tres
+      caiam no chao em silencio. A pergunta que eles existiam para responder
+      ("quantas vezes a retentativa salvou?") ficaria sem resposta, e a descoberta
+      viria semanas depois, ao consultar a tabela.
+    - HELPER TESTADO, FIACAO NAO (D71), cometido UM DIA depois de registrar o D71:
+      o teste da 1.66.0 afirmava `_ev["recusa_tool"] == 1` - testava o DICIONARIO,
+      nao a persistencia, e passava.
+    - `chars_projeto` estava orfao DESDE A 1.65.0 (23/08/2026). A medicao do canal
+      do projeto foi escrita e nunca gravada por tres semanas - achada por este
+      mesmo teste, na primeira execucao.
+    - teste_analytics_colunas.py: varre o fonte atras de toda atribuicao
+      `_ev["x"]`/`ev["x"]` e exige coluna no INSERT. Contador novo sem coluna vira
+      erro de CI, em vez de descoberta tardia. Varre os DOIS nomes do evento - so
+      `_ev` produzia falso positivo em `latencia_ms`, e acusacao errada num teste
+      de higiene gasta a confianca dele.
   1.66.0:
     - RETENTATIVA QUANDO A TOOL RECUSA. Medido em 12/09/2026, no baseline de deck:
       1 em 5 pedidos voltava como texto de diagnostico em vez de arquivo ("o slide
@@ -2290,7 +2309,16 @@ def _analytics_write(db_path, ev):
                      "chars_anexo INTEGER", "chars_historico INTEGER",
                      "tok_classif_prompt INTEGER", "tok_classif_compl INTEGER",
                      "tok_gerador_prompt INTEGER", "tok_gerador_compl INTEGER",
-                     "classif_provedor TEXT", "origem_modelo TEXT"):
+                     "classif_provedor TEXT", "origem_modelo TEXT",
+                     # 1.66.1: quatro colunas que FALTAVAM para chaves ja escritas
+                     # em `_ev`. O INSERT tem lista de colunas EXPLICITA, entao a
+                     # chave sem coluna nao erra - ela some. `chars_projeto` estava
+                     # assim desde a 1.65.0 (23/08): a medicao do canal do projeto
+                     # foi escrita, nunca gravada, e ninguem notou porque consultar
+                     # o numero so aconteceria semanas depois.
+                     "chars_projeto INTEGER",
+                     "recusa_tool INTEGER", "recusa_salva INTEGER",
+                     "recusa_final INTEGER"):
             try:
                 con.execute("ALTER TABLE eventos ADD COLUMN " + _col)
             except Exception:
@@ -2301,8 +2329,9 @@ def _analytics_write(db_path, ev):
             "anexo_fonte, anexo_faixa, formato_saida, desfecho, recusa_cat, erro_cat, "
             "latencia_ms, audio, audio_faixa, chars_sistema, chars_acervo, chars_anexo, "
             "chars_historico, tok_classif_prompt, tok_classif_compl, tok_gerador_prompt, "
-            "tok_gerador_compl, classif_provedor, origem_modelo) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "tok_gerador_compl, classif_provedor, origem_modelo, chars_projeto, "
+            "recusa_tool, recusa_salva, recusa_final) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (ts, ev.get("user_hash"), ev.get("rota"), ev.get("classificador"),
              ev.get("trava"), ev.get("anexo"), ev.get("anexo_fonte"),
              ev.get("anexo_faixa"), ev.get("formato_saida"),
@@ -2312,7 +2341,9 @@ def _analytics_write(db_path, ev):
              ev.get("chars_historico"), ev.get("tok_classif_prompt"),
              ev.get("tok_classif_compl"), ev.get("tok_gerador_prompt"),
              ev.get("tok_gerador_compl"), ev.get("classif_provedor"),
-             ev.get("origem_modelo")),
+             ev.get("origem_modelo"), ev.get("chars_projeto"),
+             ev.get("recusa_tool"), ev.get("recusa_salva"),
+             ev.get("recusa_final")),
         )
         con.commit()
     finally:
