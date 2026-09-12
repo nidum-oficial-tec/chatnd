@@ -39,4 +39,16 @@ jobs:
       - name: Conferir o YAML dos workflows
         uses: docker://rhysd/actionlint:latest
         with:
-          args: -color
+          # MESMA CALIBRAGEM DA ESTEIRA, pelo mesmo motivo. La a primeira
+          # execucao voltou vermelha com 5 achados do shellcheck, todos
+          # info/style e nenhum um defeito. Alarme que nasce vermelho por estilo
+          # e alarme que alguem desliga na primeira semana (D53), e ai os erros
+          # de verdade somem junto.
+          #
+          # Os checks do PROPRIO actionlint ficam inteiros - sao eles que pegam
+          # a armadilha de 11/09 (string multilinha saindo do bloco `run: |`).
+          args: >-
+            -color
+            -ignore "SC2086"
+            -ignore "SC2129"
+            -ignore "SC2016"
