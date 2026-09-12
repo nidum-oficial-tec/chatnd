@@ -73,6 +73,7 @@ from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
 )
+from open_webui.utils.nidum_orcamento import orcar
 from open_webui.utils.access_control import has_connection_access, has_permission
 from open_webui.utils.access_control.files import get_accessible_folder_files
 from open_webui.utils.chat import generate_chat_completion
@@ -1187,6 +1188,12 @@ async def process_tool_result(
         else:
             tool_result = str(tool_result)
 
+    # ORCAMENTO DE CONTEXTO POR TURNO (Fase E #13). PONTO UNICO: os dois
+    # caminhos que executam tool no middleware passam por aqui, entao uma
+    # chamada cobre as seis tools de conteudo que o agente recebe - e as que
+    # vierem depois. Um teto so na busca seria contornado pelo `view_file`,
+    # cujo hard cap e 100.000 chars, sem ninguem perceber.
+    tool_result = orcar(request, tool_result, tool_function_name)
     return tool_result, tool_result_files, tool_result_embeds
 
 
