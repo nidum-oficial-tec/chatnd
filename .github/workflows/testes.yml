@@ -1,0 +1,81 @@
+# TESTES DO _nidum_manutencao - antes NINGUEM os rodava em CI.
+#
+# POR QUE ISTO EXISTE (12/09/2026): a plataforma tinha seis suites em
+# `_nidum_manutencao/teste_*.py` e nenhum workflow que as executasse. A
+# `trava_bump.yml` roda UMA delas, e so quando o PR toca `_nidum_tools/`. As
+# outras cinco rodavam quando alguem lembrava - ou seja, nunca depois da semana
+# em que foram escritas.
+#
+# E A CLASSE DISSO E A MESMA QUE PASSAMOS A SEMANA CONSERTANDO. O D71 ("helper
+# testado, fiacao nao") diz que funcao correta com teste que passa nao garante
+# nada se o valor nao chega a quem usa. Aqui e o mesmo no nivel do processo:
+# teste correto, que passa, e que ninguem executa - nao protege de nada. O
+# buraco esta ENTRE o teste e o CI, e e invisivel para quem olha so o teste.
+#
+# O gatilho que fechou o caso: o teste do PR #101 (etiquetas de procedencia)
+# nasceu provando duas regressoes reais e nao rodaria em lugar nenhum.
+#
+# RODA EM TODO PR, e nao por caminho: estas suites provam coisas que atravessam
+# o repositorio (equivalencia entre a regra do backend e a do pipe, listas de
+# publicados que precisam concordar). Filtrar por caminho deixaria passar a
+# mudanca no OUTRO lado da comparacao - que e exatamente o defeito que elas
+# existem para pegar.
+
+name: Plataforma - testes de manutencao
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testes-plataforma-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # As suites comparam o backend com o fonte do PIPE (_nidum_tools) e
+          # com o historico. Checkout raso serve para as duas primeiras; a
+          # ancora do conferidor precisa de historico, e ela roda noutro
+          # workflow. Aqui o padrao basta.
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Rodar TODAS as suites de manutencao
+        # `shell: bash {0}` REMOVE o `-e` implicito do GitHub. Sem isto, a
+        # primeira suite vermelha mata o script e as demais nem rodam - e o log
+        # nao diz quais faltaram. A licao veio do testes.yml da esteira, onde
+        # exatamente isso aconteceu.
+        shell: bash {0}
+        run: |
+          falhou=0
+          # Glob direto, nao `$(ls ...)`: o repo tem caminho com espaco, e a
+          # linha ensina o padrao onde ela for copiada (SC2012).
+          for f in _nidum_manutencao/teste_*.py; do
+            saida=$(python "$f" 2>&1)
+            rc=$?
+            nome=$(basename "$f")
+            # rc E o texto: uma suite que imprime FALHA e sai 0 continua sendo
+            # falha. Conferir so o codigo de saida ja deixou passar suite quebrada
+            # nesta casa.
+            if [ "$rc" != "0" ] || echo "$saida" | grep -qE "^  FALHA|^FALHOU"; then
+              falhou=1
+              echo "::error::$nome FALHOU"
+              echo "--- $nome"
+              echo "$saida" | tail -25
+            else
+              echo "verde   $nome"
+            fi
+          done
+          exit $falhou
