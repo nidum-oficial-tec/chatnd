@@ -99,7 +99,7 @@
 | **ND - Fonte (Fundadores)** | `705ca6ca-7f8a-4352-8004-4ee41f72b5ab` | A pasta `FONTE/` do repositório da esteira |
 | **ND - Acervos Institucionais** | `9ce06025-7b38-4b73-b225-b22932e6e73a` | **Todas as demais** pastas (`ACERVOS/`, `MKT/`, `JUR/`, `TEC/`, …) |
 
-*Verifique:* `_scripts/sync_config.json`, **no repositório `nidum-chatnd-basefonte`** — é lá que os ids são a fonte da verdade, **não aqui**. Esta tabela é cópia, e cópia envelhece.
+*Verifique:* `_scripts/sync_config.json`, **no repositório `chatnd-conhecimento`** — é lá que os ids são a fonte da verdade, **não aqui**. Esta tabela é cópia, e cópia envelhece.
 
 **Quem enche as coleções:** a **esteira**, a cada 6 horas, a partir do SharePoint. **Ninguém sobe arquivo à mão.**
 
@@ -248,7 +248,7 @@ Por isso esse caminho fica **desligado**, e o **pipe** é quem aciona a web — 
 
 ## Como se prova que uma mudança não quebrou nada
 
-**O banco de perguntas** — `testes/banco_perguntas_chatnd.md`, no repositório `nidum-chatnd-basefonte`. 20 perguntas, rodadas **antes e depois** de toda mudança de busca ou de system prompt.
+**O banco de perguntas** — `testes/banco_perguntas_chatnd.md`, no repositório `chatnd-conhecimento`. 20 perguntas, rodadas **antes e depois** de toda mudança de busca ou de system prompt.
 
 **Placar em 16/07/2026: 18 OK · 1 PARCIAL · 0 FALHOU.**
 

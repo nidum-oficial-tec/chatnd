@@ -9,7 +9,7 @@ Nao contem segredo: SITE_ID e PERMISSION_ID sao identificadores publicos; o logi
 seu, feito no navegador.
 
 COMO USAR:
-  cd "C:\\Users\\daviv\\dev\\nidum-platform"
+  cd "C:\\Users\\daviv\\Claude\\Projects\\ChatND\\interface-chatnd"
   py _nidum_manutencao\\liberar_escrita_sharepoint.py
 
 O script vai mostrar uma URL e um codigo. Abra a URL, entre com sua conta ADMIN e

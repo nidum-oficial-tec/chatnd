@@ -41,6 +41,6 @@ Há ainda uma segunda frente em construção dentro do mesmo projeto: a **frente
 - **Subir/atualizar a plataforma:** ver **[02_Guia_de_Implantacao](02_Guia_de_Implantacao.md)**. Em resumo, há **dois caminhos**:
   1. **Mudanças no roteador ChatND e na ferramenta de arquivos** → publicadas **ao vivo via API** (sem derrubar o serviço).
   2. **Mudanças no código do backend** (frente Editorial, branding, Dockerfile) → vão por **git push → Railway reconstrói** (causa alguns minutos de indisponibilidade).
-- **Mexer no código localmente:** o repositório está clonado em `C:\Users\daviv\dev\nidum-platform`. Ver o **[05_Guia_do_Contribuidor](05_Guia_do_Contribuidor.md)**.
+- **Mexer no código localmente:** o repositório está clonado em `C:\Users\daviv\Claude\Projects\ChatND\interface-chatnd`. Ver o **[05_Guia_do_Contribuidor](05_Guia_do_Contribuidor.md)**.
 
 > **Convenção deste pacote:** tudo que é específico da Nidum vive em pastas com prefixo `_nidum_` na raiz do repositório: `_nidum_docs/` (esta documentação), `_nidum_tools/` (código do roteador ChatND e da ferramenta de arquivos), `_nidum_manutencao/` (scripts de manutenção). O resto do repositório é o Open WebUI original.

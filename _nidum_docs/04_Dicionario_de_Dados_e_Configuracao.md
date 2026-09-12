@@ -99,8 +99,8 @@ Configuráveis ao vivo via `POST /api/v1/functions/id/chatnd/valves/update`.
 | O quê | Id / valor |
 |---|---|
 | Org GitHub | `nidum-oficial-tec` |
-| Repositório | `nidum-platform` (fork de `open-webui/open-webui`) |
-| Projeto Railway | `surprising-flow` · serviço `nidum-platform` · região `sfo` |
+| Repositório | `chatnd` (fork de `open-webui/open-webui`) — renomeado de `nidum-platform` em 12/09/2026 |
+| Projeto Railway | `ChatND` · serviço `ChatND` · região `sfo` |
 | Volume | `/app/backend/data` (500 MB) |
 | Domínio | `chatnd.nidumbrasil.com.br` |
 | Função roteadora | `chatnd` (nome "ChatND") |

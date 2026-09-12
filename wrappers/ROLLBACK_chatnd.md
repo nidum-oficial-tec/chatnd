@@ -21,7 +21,7 @@ O Open WebUI **persiste o valor das valves no banco** — mudar o *default* no c
 ## Onde pegar a versão anterior do `chatnd.py` (git, alternativa)
 A última versão mergeada antes deste pacote está em `origin/main` (era **1.18.0**):
 ```bash
-cd nidum-platform
+cd C:\Users\daviv\Claude\Projects\ChatND\interface-chatnd
 git show origin/main:_nidum_tools/chatnd.py > chatnd_1.18.0.py
 ```
 ⚠️ **Ressalva:** se o pipe no ar tiver sido editado à mão no painel e divergir da `main`, a verdade do rollback é a **cópia do passo 1**, não a `main`. Use o git só se tiver certeza de que o pipe no ar == `origin/main`.

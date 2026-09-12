@@ -15,7 +15,7 @@
 | Branding / imagem do contêiner | `backend/open_webui/static/`, `Dockerfile` | git push (rebuild) |
 | Scripts de manutenção | `_nidum_manutencao/` | local (não vai pro app) |
 
-> O repositório está clonado em `C:\Users\daviv\dev\nidum-platform` (**fora** do OneDrive, para não corromper o git).
+> O repositório está clonado em `C:\Users\daviv\Claude\Projects\ChatND\interface-chatnd` (**fora** do OneDrive, para não corromper o git).
 
 ## Regras que **nunca** devem ser quebradas
 
