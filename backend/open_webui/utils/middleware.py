@@ -4958,7 +4958,23 @@ async def streaming_chat_response_handler(response, ctx):
                         else:
                             break
                     except Exception as e:
-                        log.debug(e)
+                        # DIAGNOSTICO IMPOSSIVEL POR CONSTRUCAO - era `log.debug(e)`.
+                        #
+                        # Producao roda em INFO, entao esta linha nao existia: a
+                        # excecao sumia e o laco quebrava, devolvendo a resposta
+                        # com o que ja tinha acumulado. Em 11/09 isso apareceu
+                        # como "5 Origens" e NENHUM texto - sem erro na tela, sem
+                        # traceback, sem nada no log.
+                        #
+                        # O custo real nao foi a falha: foi nao dar para saber a
+                        # CAUSA. Teto de iteracao, estouro de contexto e quebra do
+                        # provedor entravam todos por aqui e saiam com o mesmo
+                        # rosto. Enquanto o debug estivesse aqui, qualquer
+                        # hipotese era indistinguivel das outras.
+                        log.exception(
+                            'Tool-call loop aborted after %s iteration(s): %s',
+                            tool_call_iterations, e,
+                        )
                         break
 
                 if (
@@ -5149,7 +5165,11 @@ async def streaming_chat_response_handler(response, ctx):
                             else:
                                 break
                         except Exception as e:
-                            log.debug(e)
+                            # Mesmo defeito do laco de tool call acima, noutro
+                            # laco: engolia em DEBUG (invisivel em producao) e
+                            # quebrava. Consertado junto - deixar um dos dois
+                            # calado manteria metade do diagnostico impossivel.
+                            log.exception('Code-interpreter loop aborted: %s', e)
                             break
 
                 # Mark all in-progress items as completed
