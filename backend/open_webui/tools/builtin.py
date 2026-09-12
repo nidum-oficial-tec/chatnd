@@ -6,6 +6,7 @@ These tools are automatically available when native function calling is enabled.
 IMPORTANT: DO NOT IMPORT THIS MODULE DIRECTLY IN OTHER PARTS OF THE CODEBASE.
 """
 
+from open_webui.utils.nidum_procedencia import anotar_chunk
 from open_webui.tools.knowledge_fs import kb_exec  # noqa: F401 — re-exported
 
 import asyncio
@@ -2545,11 +2546,24 @@ async def query_knowledge_files(
                 distances = query_results.get('distances', [[]])[0]
 
                 for idx, doc in enumerate(documents):
+                    fonte = metadatas[idx].get('source', metadatas[idx].get('name', 'Unknown'))
                     chunk_info = {
                         'content': doc,
-                        'source': metadatas[idx].get('source', metadatas[idx].get('name', 'Unknown')),
+                        'source': fonte,
                         'file_id': metadatas[idx].get('file_id', ''),
                     }
+                    # PROCEDENCIA (Fase E #3+#13). O pipe etiqueta cada trecho antes
+                    # de entregar ao modelo; o agente recebia o JSON cru. Sao estas
+                    # etiquetas que sustentam a parede geral x documentos (D23): o
+                    # modelo pode ver as duas fontes porque cada uma chega DECLARADA.
+                    # Sem elas, o agente ve uma lei municipal de terceiro exatamente
+                    # como ve uma ata de decisao da casa.
+                    #
+                    # CAMPO PROPRIO, e nao prefixo no 'content': o conteudo do trecho
+                    # e dado do documento; a etiqueta e afirmacao NOSSA sobre ele.
+                    # Misturar os dois faria a etiqueta parecer texto do documento -
+                    # que e exatamente a confusao que ela existe para impedir.
+                    anotar_chunk(chunk_info, fonte)
                     if idx < len(distances):
                         chunk_info['distance'] = distances[idx]
                     chunks.append(chunk_info)
