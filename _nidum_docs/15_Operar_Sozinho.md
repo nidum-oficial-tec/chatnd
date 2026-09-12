@@ -119,6 +119,11 @@ traceback — antes ele falhava calado.
 - **Publicar pipe ou tool.** Só pelo workflow *Publicar pipe/tools (manual)*,
   **com `dry_run` marcado primeiro**. E o `chatnd` não precisa ser publicado: o
   que está no ar é equivalente ao repo (difere só na formatação).
+  **ARMADILHA (D74):** publicar **só a tool não basta** — o pipe guarda o módulo
+  dela em cache que nunca invalida (`_get_tool`). Depois de publicar a tool,
+  **republique o pipe** (ou reinicie o serviço), senão você testa o código
+  antigo achando que testou o novo. Em 11/09 isso passou despercebido porque um
+  deploy tinha acabado de reiniciar o contêiner por outro motivo.
 - **Qualquer coisa que apague conteúdo** — inclusive "limpar" a base, rodar
   remoção em massa, ou passar `--confirmar-remocao-em-massa`.
 - **Editar script para destravar um workflow.** Se o workflow quebrou por
