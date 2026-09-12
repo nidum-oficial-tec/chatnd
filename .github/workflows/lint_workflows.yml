@@ -1,0 +1,54 @@
+# O YAML DOS WORKFLOWS E CONFERIDO - antes nao era, em nenhum dos dois repos.
+#
+# POR QUE ISTO IMPORTA MAIS DO QUE PARECE: workflow com YAML quebrado NAO RODA.
+# Nao falha vermelho, nao avisa - some. E o que some junto e a rede de protecao:
+# a conferencia diaria, a trava de bump, a limpeza, o publish. Um erro de
+# indentacao apaga um mecanismo inteiro sem deixar rastro no lugar onde alguem
+# olharia.
+#
+# O CASO CONCRETO (11/09/2026): escrevendo os workflows de alarme, quebrei o YAML
+# TRES VEZES SEGUIDAS - sempre a mesma armadilha, string multilinha em coluna
+# zero saindo do bloco `run: |`. As tres so apareceram porque rodei um parser a
+# mao. Nenhuma teria aparecido no CI, porque o CI nao olhava.
+#
+# O actionlint pega isso em segundos, e mais: expressao `${{ }}` invalida,
+# `needs` apontando para job que nao existe, `uses` mal formado, shell com erro
+# de sintaxe dentro do `run`.
+#
+# GATILHO POR CAMINHO, e nao em todo PR: ele so tem o que dizer quando um
+# workflow muda. Rodar em todo PR seria minuto de runner para conferir arquivo
+# que ninguem tocou - e job que quase sempre nao tem nada a dizer e job que se
+# para de ler.
+
+name: Lint dos workflows (actionlint)
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Conferir o YAML dos workflows
+        uses: docker://rhysd/actionlint:latest
+        with:
+          # MESMA CALIBRAGEM DA ESTEIRA, pelo mesmo motivo. La a primeira
+          # execucao voltou vermelha com 5 achados do shellcheck, todos
+          # info/style e nenhum um defeito. Alarme que nasce vermelho por estilo
+          # e alarme que alguem desliga na primeira semana (D53), e ai os erros
+          # de verdade somem junto.
+          #
+          # Os checks do PROPRIO actionlint ficam inteiros - sao eles que pegam
+          # a armadilha de 11/09 (string multilinha saindo do bloco `run: |`).
+          args: >-
+            -color
+            -ignore "SC2086"
+            -ignore "SC2129"
+            -ignore "SC2016"
