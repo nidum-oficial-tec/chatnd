@@ -93,8 +93,12 @@ async def main():
                 "audio", "audio_faixa",                       # VOZ 1.54.0
                 "chars_sistema", "chars_acervo", "chars_anexo", "chars_historico",
                 "tok_classif_prompt", "tok_classif_compl", "tok_gerador_prompt",
-                "tok_gerador_compl", "classif_provedor", "origem_modelo"}   # TOKEN 2a/1.55.0
-    ok &= check("as colunas sao EXATAMENTE as 26 do schema (16 + token 2a)",
+                "tok_gerador_compl", "classif_provedor", "origem_modelo",  # TOKEN 2a/1.55.0
+                # 1.66.1: quatro colunas para chaves que ja eram escritas em `_ev`
+                # e nao tinham onde cair. `chars_projeto` estava assim desde a
+                # 1.65.0 (23/08). Continuam content-free: inteiros de contagem.
+                "chars_projeto", "recusa_tool", "recusa_salva", "recusa_final"}
+    ok &= check("as colunas sao EXATAMENTE as 30 do schema (26 + recusa 1.66.1)",
                 set(cols) == esperado)
     # Proibidas = substrings que denunciariam uma coluna de CONTEUDO/PII. 'formato_saida'
     # e o ROTULO do formato (pptx/html), nao a saida - por isso 'saida' nao entra aqui; a
