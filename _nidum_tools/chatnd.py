@@ -1,9 +1,32 @@
 """
 title: ChatND
 author: Nidum
-version: 1.65.0
+version: 1.66.0
 description: Roteador automatico. Classifica o pedido (gpt-5-mini) e encaminha para o modelo NIDUM adequado. Na rota de documentos faz RAG da base institucional. Na rota de arquivo, gera a estrutura com gpt-5.1 e chama a ferramenta gerador_de_arquivos_nidum (inclusive com imagens anexadas pelo usuario). Na rota de imagem, gera a imagem via Gemini (motor oculto). Audio anexado e transcrito (Whisper local) e vira o pedido, roteado como texto. O usuario nao escolhe o motor.
 changelog:
+  1.66.0:
+    - RETENTATIVA QUANDO A TOOL RECUSA. Medido em 12/09/2026, no baseline de deck:
+      1 em 5 pedidos voltava como texto de diagnostico em vez de arquivo ("o slide
+      16 (tipo 'destaque') chegou sem nenhum campo de corpo"). A recusa esta CERTA -
+      e a validacao impedindo o slide mudo, e a mensagem foi desenhada para ENSINAR.
+      O buraco era nao haver quem aprendesse: o pipe ja retentava com JSON invalido
+      ou vazio, mas ali o JSON estava BOM e quem recusou foi a TOOL, depois.
+      Agora a recusa volta ao gerador como instrucao, com o texto INTEGRAL dela.
+    - A RECUSA QUE SOBRA CHEGA INTEIRA AO USUARIO. Se as duas tentativas falharem,
+      o diagnostico e a resposta - nao "nao consegui". Uma mensagem que DIZ o que
+      faltou permite corrigir o pedido; a outra nao diz nada. Duas tentativas
+      falhando e informacao, nao vergonha.
+    - CONTADORES recusa_tool / recusa_salva / recusa_final no evento de analytics.
+      Sem eles, "a rede cobriu um azar" e "a rede esconde um defeito que acontece
+      sempre" sao indistinguiveis (D68) - e o segundo e invisivel justamente
+      porque funciona. Se recusa_salva ~ recusa_tool em toda rodada, o
+      estruturador esta produzindo slide mudo com frequencia e ISSO e o defeito.
+    - `_despachar_tool` extraido de `_gerar_arquivo`: mesma cadeia, mesma ordem,
+      mesmos argumentos. Extrair foi o que fez a retentativa caber em dez linhas
+      em vez de duplicar a cadeia - e cadeia duplicada e onde as copias divergem.
+    - teste_recusa_retentativa.py prova a FIACAO (o valor que o usuario recebe),
+      nao so os helpers - e foi verificado reintroduzindo os dois defeitos
+      possiveis, conforme o D72.
   1.65.0:
     - CANAL DO PROJETO (pastas com instrucoes + colecoes). O backend (env
       FOLDER_KNOWLEDGE_TO_METADATA=True, default) parou de injetar os arquivos da pasta
@@ -1404,6 +1427,29 @@ CLASSIFICADOR = (
     "Exemplos validos: 'documentos | triade', 'documentos | conceitual', 'documentos', "
     "'geral | recente', 'geral'."
 )
+
+def _eh_recusa(saida):
+    # A tool recusa devolvendo texto que comeca por "DIAGNOSTICO <metodo>:" - ver
+    # _diag_slide_sem_corpo e _diag_lista_vazia no gerador. Nao ha excecao nem
+    # codigo de erro: a recusa E a string de retorno, porque ela foi desenhada
+    # para o MODELO ler, nao para o pipe.
+    return str(saida or "").lstrip().startswith("DIAGNOSTICO ")
+
+
+def _instrucao_recusa(diagnostico):
+    # A recusa volta ao gerador como INSTRUCAO, com o texto integral. Nao resumo
+    # e nao parafraseio: a mensagem ja diz qual slide, qual tipo, o que faltava e
+    # quais chaves chegaram - e foi escrita para ensinar. Reescrever seria trocar
+    # o diagnostico de quem viu o dado pelo meu palpite sobre ele.
+    return (
+        "\n\nATENCAO: a tentativa anterior foi RECUSADA pelo gerador de arquivos, "
+        "com este diagnostico:\n"
+        + str(diagnostico or "").strip()
+        + "\n\nCorrija EXATAMENTE o que o diagnostico aponta e responda de novo "
+        "com o JSON completo. Todo slide dos tipos que exigem corpo precisa de "
+        "'texto', 'bullets' ou 'itens' preenchido."
+    )
+
 
 GERADOR = (
     "Voce gera a ESTRUTURA de um arquivo a partir da conversa. Responda APENAS com "
@@ -5680,6 +5726,49 @@ class Pipe:
             )
         return ""
 
+    async def _despachar_tool(self, tool, tipo, titulo, dados, __user__, eco,
+                              imagens, formato_codigo=""):
+        # O DESPACHO, extraido para poder ser chamado DUAS VEZES (a retentativa de
+        # recusa). A logica nao mudou: mesma cadeia, mesma ordem, mesmos
+        # argumentos. Extrair foi o que fez a retentativa caber em dez linhas em
+        # vez de duplicar a cadeia - e cadeia duplicada e onde as duas copias
+        # comecam a divergir.
+        if tipo == "xlsx":
+            return await tool.gerar_xlsx(
+                titulo, dados.get("planilhas") or [], True, __user__, ecossistema=eco
+            )
+        if tipo == "docx":
+            return await tool.gerar_docx(
+                titulo, dados.get("secoes") or [], True, __user__, ecossistema=eco,
+                imagens=imagens,
+            )
+        if tipo == "pdf":
+            return await tool.gerar_pdf(
+                titulo, dados.get("secoes") or [], True, __user__, ecossistema=eco,
+                imagens=imagens,
+            )
+        if tipo in ("apresentacao", "apresentacao_html", "slides_html", "deck"):
+            return await tool.gerar_apresentacao_html(
+                titulo, dados.get("slides") or [], __user__, ecossistema=eco,
+                imagens=imagens,
+            )
+        if tipo == "html":
+            return await tool.gerar_html(
+                titulo, dados.get("html") or "", __user__, ecossistema=eco,
+                imagens=imagens,
+            )
+        if tipo == "codigo":
+            # MODO PRESERVACAO: verbatim, sem marca nem editor (o app do usuario tem
+            # os proprios controles; o contenteditable brigaria com os campos).
+            return await tool.gerar_codigo(
+                titulo, dados.get("codigo") or dados.get("html") or "",
+                formato_codigo or "html", __user__, ecossistema=eco,
+            )
+        return await tool.gerar_pptx(
+            titulo, dados.get("slides") or [], True, __user__, ecossistema=eco,
+            imagens=imagens,
+        )
+
     async def _gerar_arquivo(self, request, user, messages, __user__, imagens=None,
                              original="", formato_codigo="", _ev=None):
         # imagens = anexos do usuario (data-URLs), extraidos pelo pipe na rota de
@@ -5742,42 +5831,54 @@ class Pipe:
         # As imagens vao por argumento NOMEADO (mesmo padrao do ecossistema=eco): os
         # bytes saem do pipe direto para a tool, sem passar por modelo nenhum. xlsx NAO
         # recebe (imagem em planilha esta fora de escopo). Requer a tool 2.5.0.
-        if tipo == "xlsx":
-            saida = await tool.gerar_xlsx(
-                titulo, dados.get("planilhas") or [], True, __user__, ecossistema=eco
-            )
-        elif tipo == "docx":
-            saida = await tool.gerar_docx(
-                titulo, dados.get("secoes") or [], True, __user__, ecossistema=eco,
-                imagens=imagens,
-            )
-        elif tipo == "pdf":
-            saida = await tool.gerar_pdf(
-                titulo, dados.get("secoes") or [], True, __user__, ecossistema=eco,
-                imagens=imagens,
-            )
-        elif tipo in ("apresentacao", "apresentacao_html", "slides_html", "deck"):
-            saida = await tool.gerar_apresentacao_html(
-                titulo, dados.get("slides") or [], __user__, ecossistema=eco,
-                imagens=imagens,
-            )
-        elif tipo == "html":
-            saida = await tool.gerar_html(
-                titulo, dados.get("html") or "", __user__, ecossistema=eco,
-                imagens=imagens,
-            )
-        elif tipo == "codigo":
-            # MODO PRESERVACAO: verbatim, sem marca nem editor (o app do usuario tem os
-            # proprios controles; o contenteditable brigaria com os campos).
-            saida = await tool.gerar_codigo(
-                titulo, dados.get("codigo") or dados.get("html") or "",
-                formato_codigo or "html", __user__, ecossistema=eco,
-            )
-        else:
-            saida = await tool.gerar_pptx(
-                titulo, dados.get("slides") or [], True, __user__, ecossistema=eco,
-                imagens=imagens,
-            )
+        saida = await self._despachar_tool(tool, tipo, titulo, dados, __user__,
+                                           eco, imagens, formato_codigo)
+
+        # RETENTATIVA QUANDO A TOOL RECUSA (medido em 12/09/2026).
+        #
+        # O QUE ACONTECIA: 1 em 5 pedidos de deck voltava como texto de diagnostico
+        # em vez de arquivo - "o slide 16 (tipo 'destaque') chegou sem nenhum campo
+        # de corpo". A recusa esta CERTA: e a validacao impedindo o slide mudo, e a
+        # mensagem foi desenhada para ENSINAR o modelo.
+        #
+        # O buraco era a ausencia de quem aprendesse. O pipe ja retentava quando o
+        # JSON vinha invalido ou vazio (_dados_uteis, acima), mas ali o JSON estava
+        # bom - quem recusou foi a TOOL, depois. Nenhuma rede cobria esse caso, e a
+        # licao que a recusa carrega chegava ao USUARIO em vez de voltar ao modelo.
+        if _eh_recusa(saida):
+            log.warning("chatnd: a tool RECUSOU (%s); retentando com o diagnostico",
+                        (saida or "").strip()[:90])
+            if _ev is not None:
+                _ev["recusa_tool"] = 1
+            dados2 = await self._chamar_gerador(
+                request, user, messages, sistema + _instrucao_recusa(saida), _ev)
+            if self._dados_uteis(dados2):
+                dados = dados2
+                titulo = dados.get("titulo") or titulo
+                eco = dados.get("ecossistema") or eco
+                if not formato_codigo:
+                    tipo = (dados.get("tipo") or tipo).lower()
+                saida = await self._despachar_tool(tool, tipo, titulo, dados,
+                                                   __user__, eco, imagens,
+                                                   formato_codigo)
+                if not _eh_recusa(saida):
+                    # CONTA A SALVACAO, e o numero e o ponto. Se a retentativa
+                    # salvar SEMPRE, o estruturador esta produzindo slide mudo com
+                    # frequencia - e a rede estaria ESCONDENDO um defeito em vez de
+                    # cobrir um azar. Sem contar, os dois casos sao indistinguiveis
+                    # (D68), e o segundo e invisivel justamente porque funciona.
+                    log.warning("chatnd: a retentativa SALVOU a geracao")
+                    if _ev is not None:
+                        _ev["recusa_salva"] = 1
+
+        # A RECUSA QUE SOBROU CHEGA INTEIRA AO USUARIO. Condicao do Davi, e ela
+        # esta certa: trocar o diagnostico por "nao consegui" transformaria uma
+        # mensagem que DIZ o que faltou numa que nao diz nada, e quem recebesse
+        # nao teria como corrigir o pedido. Duas tentativas falhando e informacao.
+        if _eh_recusa(saida):
+            log.error("chatnd: a tool recusou NAS DUAS tentativas")
+            if _ev is not None:
+                _ev["recusa_final"] = 1
         # Item 2 (escopo por arquivo): se o pedido juntava varios modulos/partes
         # e o arquivo saiu OK, oferecer gerar os demais - um por vez.
         if "Link para download" in (saida or ""):
