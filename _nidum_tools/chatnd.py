@@ -3869,21 +3869,73 @@ _PAPEIS_MAPA = ("atas", "projetos", "fonte", "normas", "marca", "contratos", "ex
 
 
 def _parse_mapa_colecoes(raw):
-    """Valve MAPA_COLECOES (json papel->id). Vazio/invalido -> {} (fallback total)."""
+    """Valve MAPA_COLECOES (json papel->id). Vazio/invalido -> {} (fallback total).
+
+    POR QUE ISTO GRITA, e nao so devolve {} (pendencia 5, 17/09/2026): o retorno vazio
+    manda o pipe para o BASE_CONHECIMENTO_ID, e em 17/09 essa valve apontava para DUAS
+    colecoes que ja nao existem (404). Somadas, as duas coisas produzem RAG VAZIO com
+    aparencia de normalidade: o chat responde sem acervo nenhum e ninguem percebe.
+    Aconteceu de verdade, por UMA VIRGULA - um id colado sem a chave deixou o JSON
+    invalido, o parser engoliu, e so apareceu quando alguem leu a valve de volta.
+
+    VAZIO e INVALIDO sao coisas diferentes e passam a ser tratados como tais:
+      - vazio    = desligado DE PROPOSITO (a valve nasce assim). Silencio e correto.
+      - invalido = alguem quis configurar e ERROU. Silencio e o defeito.
+
+    Continua devolvendo {} nos dois casos - o comportamento NAO muda, a resposta nunca
+    degrada por causa de log (prioridade da casa). O que muda e o rastro.
+    """
     raw = (raw or "").strip()
     if not raw:
         return {}
     try:
         d = json.loads(raw)
-    except Exception:
+    except Exception as e:
+        log.error(
+            "chatnd: MAPA_COLECOES INVALIDA (%s) - a valve foi IGNORADA e a busca cai no "
+            "BASE_CONHECIMENTO_ID. Se ele apontar para colecao inexistente, a rota "
+            "documentos responde SEM ACERVO. Conserte o JSON no painel: %s",
+            e, _amostra_json_invalido(raw))
         return {}
     if not isinstance(d, dict):
+        log.error(
+            "chatnd: MAPA_COLECOES nao e um objeto JSON (veio %s) - valve IGNORADA, "
+            "busca cai no BASE_CONHECIMENTO_ID.", type(d).__name__)
         return {}
-    out = {}
+    out, descartadas = {}, []
     for k, v in d.items():
         if isinstance(k, str) and isinstance(v, str) and v.strip():
             out[k.strip().lower()] = v.strip()
+        else:
+            descartadas.append(repr(k)[:40])
+    if descartadas:
+        # entrada malformada NAO invalida o resto do mapa - mas some em silencio sem isto.
+        log.warning("chatnd: MAPA_COLECOES - %d entrada(s) descartada(s) por formato: %s",
+                    len(descartadas), ", ".join(descartadas[:5]))
+    if not out:
+        log.error("chatnd: MAPA_COLECOES sem NENHUMA entrada valida - valve IGNORADA, "
+                  "busca cai no BASE_CONHECIMENTO_ID.")
     return out
+
+
+def _amostra_json_invalido(raw, volta=60):
+    """Trecho em volta do erro de sintaxe, para o log dizer ONDE consertar.
+
+    Content-free: a valve so tem nome de papel e id de colecao - nao ha teor de documento
+    aqui. Sem isto o log diria 'invalida' e deixaria quem le procurando numa caixa de texto.
+    """
+    try:
+        json.loads(raw)
+        return "(sem erro)"
+    except ValueError as e:
+        pos = getattr(e, "pos", None)
+        if pos is None:
+            return "(posicao desconhecida)"
+        ini, fim = max(0, pos - volta), min(len(raw), pos + volta)
+        return "...%s >>><<< %s..." % (
+            " ".join(raw[ini:pos].split())[-volta:], " ".join(raw[pos:fim].split())[:volta])
+    except Exception:
+        return "(posicao desconhecida)"
 
 
 def _material_projeto_entradas(meta):
