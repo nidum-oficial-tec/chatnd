@@ -1,9 +1,20 @@
 """
 title: ChatND
 author: Nidum
-version: 1.67.0
+version: 1.67.1
 description: Roteador automatico. Classifica o pedido (gpt-5-mini) e encaminha para o modelo NIDUM adequado. Na rota de documentos faz RAG da base institucional. Na rota de arquivo, gera a estrutura com gpt-5.1 e chama a ferramenta gerador_de_arquivos_nidum (inclusive com imagens anexadas pelo usuario). Na rota de imagem, gera a imagem via Gemini (motor oculto). Audio anexado e transcrito (Whisper local) e vira o pedido, roteado como texto. O usuario nao escolhe o motor.
 changelog:
+  1.67.1:
+    - O RAZAO DE CUSTO PASSA A DIZER, NO LOG, POR QUE NAO GRAVOU. A 1.67.0 saiu
+      calada em TRES situacoes - variavel ausente no ambiente, coletor recusando
+      (401) e erro de rede - e as tres apareciam para quem le a plataforma como
+      a mesma coisa: nenhuma linha. Medido em 19-09: pergunta feita, resposta
+      dada, razao vazio, e nenhuma pista em lugar nenhum. Agora cada caso tem
+      UMA linha de log com o nome do suspeito: `razao de custo DESLIGADO - falta
+      IA_USO_URL/IA_USO_TOKEN` (uma vez por processo), `razao RECUSOU: HTTP 401`
+      (token de outra frente) ou `razao nao alcancado`. E o sucesso tambem e
+      dito (`razao registrou N linha(s)`), para o log PROVAR que funciona, e nao
+      so deixar de acusar. Continua best-effort: nada disto toca a resposta.
   1.67.0:
     - O CUSTO DO CHATND PASSA A CHEGAR AO RAZAO DA CASA. A Nidum tinha CINCO
       contabilidades de token e nenhuma somava com a outra; o `chatnd_analytics.db`
@@ -5612,7 +5623,23 @@ class Pipe:
         try:
             url = (os.environ.get("IA_USO_URL") or "").strip()
             token = (os.environ.get("IA_USO_TOKEN") or "").strip()
-            if not url or not token or not ev:
+            if not url or not token:
+                # 1.67.1: DITO UMA VEZ POR PROCESSO. Sair calado era desenho (o
+                # intervalo entre publicar e por o segredo), mas calado para
+                # sempre vira "esta gravando?" sem resposta. Uma linha, no
+                # primeiro turno, nomeando o que falta.
+                if not getattr(self, "_razao_avisou", False):
+                    self._razao_avisou = True
+                    falta = " e ".join(
+                        n for n, v in (("IA_USO_URL", url), ("IA_USO_TOKEN", token)) if not v
+                    )
+                    log.warning(
+                        "chatnd: razao de custo DESLIGADO - falta %s no ambiente "
+                        "(Railway -> Variables do servico). Nenhum custo do ChatND "
+                        "chega a plataforma ate isso ser posto.", falta,
+                    )
+                return
+            if not ev:
                 return
 
             def _n(v):
@@ -5667,9 +5694,16 @@ class Pipe:
                 })
                 linhas.append(linha)
             if not linhas:
+                # 1.67.1: turno respondido sem NENHUM token capturado e uma pista
+                # (o modelo respondeu sem `usage`?) - vai para o log, nao para o razao.
+                log.info(
+                    "chatnd: razao - turno sem tokens capturados (rota=%s, modelo=%s); "
+                    "nada gravado", ev.get("rota"), ev.get("origem_modelo"),
+                )
                 return
 
             def _enviar():
+                import urllib.error
                 import urllib.request
                 req = urllib.request.Request(
                     url,
@@ -5678,12 +5712,25 @@ class Pipe:
                     headers={"content-type": "application/json",
                              "authorization": "Bearer " + token},
                 )
+                # 1.67.1: os tres desfechos sao DITOS. O `log.debug` de antes era
+                # invisivel no Railway, e um 401 (token de outra frente) parecia
+                # exatamente igual a "funcionou": nenhuma linha, nenhum aviso.
                 try:
                     with urllib.request.urlopen(req, timeout=8) as r:
-                        if r.status >= 300:
-                            log.debug("chatnd: coletor respondeu %s", r.status)
+                        log.info("chatnd: razao registrou %d linha(s) -> HTTP %s",
+                                 len(linhas), r.status)
+                except urllib.error.HTTPError as e:
+                    try:
+                        corpo = e.read().decode("utf-8", "replace")[:200]
+                    except Exception:  # noqa: BLE001
+                        corpo = ""
+                    log.warning(
+                        "chatnd: razao RECUSOU: HTTP %s %s - se 401, o IA_USO_TOKEN do "
+                        "Railway nao e o da frente 'chatnd' (ia_app_criar)", e.code, corpo,
+                    )
                 except Exception as e:  # noqa: BLE001
-                    log.debug("chatnd: nao registrou no razao (%s)", e)
+                    log.warning("chatnd: razao nao alcancado (%s: %s) - URL=%s",
+                                type(e).__name__, e, url[:60])
 
             await asyncio.to_thread(_enviar)
         except Exception:
