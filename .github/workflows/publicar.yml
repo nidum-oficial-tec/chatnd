@@ -45,6 +45,10 @@ on:
           - gerador_de_arquivos_nidum
           - relatorio_ambientes_nidum
           - sharepoint_nidum
+          # nidum_medidor e um FILTER (19-09-2026) - no Open WebUI um filter
+          # e uma FUNCTION, como o pipe, e nao uma TOOL: por isso ele entra
+          # no ramo do publicar_pipe.py abaixo, e nao no generico.
+          - nidum_medidor
       dry_run:
         description: 'Simulacao: mostra o tamanho da mudanca, NAO escreve no painel'
         type: boolean
@@ -95,6 +99,9 @@ jobs:
           case "${{ inputs.alvo }}" in
             chatnd)
               CMD="_nidum_manutencao/publicar_pipe.py _nidum_tools/chatnd.py" ;;
+            nidum_medidor)
+              # Filter = function (/api/v1/functions), mesma rota do pipe.
+              CMD="_nidum_manutencao/publicar_pipe.py _nidum_tools/nidum_medidor.py" ;;
             *)
               # publicar_tool.py e generico: tira id, nome e descricao do
               # cabecalho do proprio arquivo - que esta no repo, que e o ponto.
