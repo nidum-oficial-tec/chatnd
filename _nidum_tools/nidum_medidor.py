@@ -27,6 +27,24 @@ required_open_webui_version: 0.5.0
 # conversa. E por isso que este desenho nao precisa de plano de contorno,
 # diferente de um gateway, que fica no meio de toda chamada.
 #
+# 19-09, DEPOIS DE MEDIR: O PIPE NAO ALIMENTA ESTE FILTER - E ELE FICA ASSIM MESMO
+# Publicado, ligado global e rodado numa conversa real, este filter recebeu
+# `usage recebido = {}`. A causa: para o Open WebUI o PIPE E O MODELO, e o
+# `chatnd` nao anexa `usage` a resposta que devolve. O numero nunca sai de dentro
+# dele - por isso quem manda a conta do pipe e o proprio pipe, em
+# `Pipe._medir_ia_uso` (chatnd.py).
+#
+# ESTE FILTER CONTINUA VALENDO, e os dois NAO se sobrepoem: ele so envia quando
+# `usage` vem PREENCHIDO, o que no caminho do pipe nunca acontece. Quem ele pega
+# e o que o pipe nao ve - um modelo ligado por CONEXAO DIRETA no ChatND, que
+# responde com `usage` de verdade e nao passa por roteador nenhum. Sem ele, esse
+# gasto ficaria fora da conta da casa sem ninguem notar.
+#
+# !! A INVARIANTE, para quem mexer no pipe depois: se um dia o `chatnd` passar a
+# ANEXAR `usage` a resposta, os dois contariam a MESMA chamada e o relatorio
+# dobraria. Quem fizer essa mudanca tem de desligar este filter no mesmo
+# movimento.
+#
 # ATENCAO - O QUE PRECISA SER CONFERIDO NUMA INSTANCIA VIVA
 # Medido no codigo em 19-09: o laco de SSE captura `usage`
 # (utils/middleware.py:4129-4133), `normalize_usage` PRESERVA o dicionario
