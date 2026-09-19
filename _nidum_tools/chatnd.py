@@ -1,9 +1,32 @@
 """
 title: ChatND
 author: Nidum
-version: 1.67.1
+version: 1.67.2
 description: Roteador automatico. Classifica o pedido (gpt-5-mini) e encaminha para o modelo NIDUM adequado. Na rota de documentos faz RAG da base institucional. Na rota de arquivo, gera a estrutura com gpt-5.1 e chama a ferramenta gerador_de_arquivos_nidum (inclusive com imagens anexadas pelo usuario). Na rota de imagem, gera a imagem via Gemini (motor oculto). Audio anexado e transcrito (Whisper local) e vira o pedido, roteado como texto. O usuario nao escolhe o motor.
 changelog:
+  1.67.2:
+    - A GERACAO CARA NAO ESTAVA NO RAZAO, E O MODELO GRAVADO ERA A ROTA. Primeira
+      linha real do ChatND na plataforma (19-09): 2.458 tokens, `modelo=documentos`,
+      custo `sem base`. Duas causas, medidas no codigo: (1) `_medir_ia_uso` lia
+      `ev['classificador']` (que guarda a CATEGORIA) e `ev['origem_modelo']` (o id
+      do wrapper do Open WebUI), e nao os modelos de verdade; (2) a resposta final
+      sai em STREAM, e o `_registrar` roda no `finally` do `pipe()` - ANTES de o
+      stream ser consumido. O `usage` do gerador chegava depois do razao fechado, e
+      so as chamadas sem stream (classificador, `_chamar_gerador`) eram contadas.
+      Numa rota de documentos com 200 mil chars de contexto, era o custo inteiro
+      ficando de fora.
+    - AGORA: o modelo de cada linha vem da RESPOSTA (`res['model']`, o snapshot
+      real) com o valve como reserva (ROUTER_MODEL / GERADOR_MODEL); a chamada
+      final pede `stream_options.include_usage` e `_stream_resiliente` le o chunk
+      de `usage` no fim do stream (`_usage_de_sse`, funcao pura, provada em
+      `_nidum_manutencao/prova_usage_sse.py`) e registra a linha `acao=resposta`
+      ali mesmo - o unico lugar que TEM o numero. Resposta final sem stream tambem
+      entra, capturada em `_resposta_ou_aviso`. Stream que termina sem `usage` e
+      DITO no log, nao engolido.
+    - Tres acoes por turno no razao, de proposito: `classificador` (gpt-5-mini),
+      `gerador` (o `_chamar_gerador`, quando roda) e `resposta` (o modelo da rota).
+      Soma-las apagaria o que a conta existe para mostrar: se o roteamento para o
+      modelo pequeno esta pagando o que promete.
   1.67.1:
     - O RAZAO DE CUSTO PASSA A DIZER, NO LOG, POR QUE NAO GRAVOU. A 1.67.0 saiu
       calada em TRES situacoes - variavel ausente no ambiente, coletor recusando
@@ -1842,6 +1865,63 @@ def _e_saudacao_trivial(messages):
     if not texto or len(texto) > 40:
         return False
     return bool(_RE_SAUDACAO.match(texto))
+
+
+def _usage_de_sse(texto):
+    # 1.67.2: USAGE de um blob SSE. A OpenAI manda o `usage` num chunk final proprio
+    # (choices=[]) quando `stream_options.include_usage` foi pedido; alguns motores
+    # o repetem em cada chunk. Le todos os `data:` e fica com o ULTIMO que tiver
+    # numero. Devolve (prompt, compl, modelo) ou (None, None, None). Defensivo aos
+    # dois vocabularios (prompt_/completion_ e input_/output_). Nunca levanta.
+    p = c = m = None
+    for linha in (texto or "").split("\n"):
+        linha = linha.strip()
+        if not linha.startswith("data:"):
+            continue
+        payload = linha[5:].strip()
+        if not payload or payload == "[DONE]":
+            continue
+        try:
+            d = json.loads(payload)
+        except Exception:
+            continue
+        if not isinstance(d, dict):
+            continue
+        u = d.get("usage")
+        if not isinstance(u, dict):
+            u = (d.get("response") or {}).get("usage") if isinstance(d.get("response"), dict) else None
+        if not isinstance(u, dict):
+            continue
+        pp = u.get("prompt_tokens", u.get("input_tokens"))
+        cc = u.get("completion_tokens", u.get("output_tokens"))
+        try:
+            pp = int(pp) if pp is not None else None
+            cc = int(cc) if cc is not None else None
+        except (TypeError, ValueError):
+            pp, cc = None, None
+        if pp is None and cc is None:
+            continue
+        p, c = pp, cc
+        if d.get("model"):
+            m = str(d.get("model"))
+    return p, c, m
+
+
+def _modelo_de_resposta(res):
+    # 1.67.2: o `model` que a RESPOSTA declara (snapshot real, ex.: gpt-5-mini-2026-..),
+    # e nao o que foi pedido nem o wrapper do Open WebUI. E o nome que a tabela de
+    # precos do razao reconhece. None se nao houver. Nunca levanta.
+    data = res if isinstance(res, dict) else None
+    if data is None:
+        corpo = getattr(res, "body", None)
+        if corpo:
+            try:
+                data = json.loads(corpo)
+            except Exception:
+                data = None
+    if isinstance(data, dict) and data.get("model"):
+        return str(data.get("model"))[:80]
+    return None
 
 
 def _tem_conteudo_sse(texto):
@@ -4584,6 +4664,9 @@ class Pipe:
             _ev["tok_classif_prompt"] = p
             _ev["tok_classif_compl"] = c
             _ev["classif_provedor"] = prov
+            # 1.67.2: o MODELO da resposta (snapshot real) - `ev['classificador']` e a
+            # categoria, e foi ela que virou `modelo=documentos` no razao.
+            _ev["classif_modelo"] = _modelo_de_resposta(res) or self.valves.ROUTER_MODEL
         return _extrair_conteudo(res).strip().lower()
 
     def _bases(self):
@@ -5252,19 +5335,29 @@ class Pipe:
         except Exception:
             log.exception("chatnd: prune de audio falhou (ignorado; o audio ja foi)")
 
-    async def _stream_resiliente(self, body_iterator, audio_ctx=None):
+    async def _stream_resiliente(self, body_iterator, audio_ctx=None, _ev=None):
         # Encaminha o stream do motor VERBATIM e, se nenhum conteudo passar
         # (ex.: motor caiu por quota/billing e devolveu vazio), emite a
         # MENSAGEM_INSTABILIDADE no lugar da resposta em branco.
+        # 1.67.2: e le o `usage` que a OpenAI manda no chunk final (pedido por
+        # stream_options.include_usage) - e o UNICO lugar onde o custo da resposta
+        # existe, porque o `_registrar` do finally roda antes de o stream andar.
         viu = False
         done_chunk = None
         buffer_txt = []   # SAIDA DE VOZ: acumula o texto SO quando audio foi pedido
+        u_p = u_c = u_m = None
         try:
             async for chunk in body_iterator:
                 if isinstance(chunk, (bytes, bytearray)):
                     txt = chunk.decode("utf-8", "ignore")
                 else:
                     txt = str(chunk)
+                if '"usage"' in txt:
+                    pp, cc, mm = _usage_de_sse(txt)
+                    if pp is not None or cc is not None:
+                        u_p, u_c = pp, cc
+                        if mm:
+                            u_m = mm
                 if not viu and _tem_conteudo_sse(txt):
                     viu = True
                 if audio_ctx is not None and "[DONE]" not in txt:
@@ -5278,6 +5371,14 @@ class Pipe:
                 yield chunk
         except Exception:
             log.exception("chatnd: excecao durante o streaming do motor")
+        # 1.67.2: o razao da resposta, no fim do stream - com ou sem [DONE] retido.
+        if _ev is not None:
+            if u_p is not None or u_c is not None:
+                await self._medir_resposta(_ev, u_p, u_c, u_m or _ev.get("modelo_rota"), "stream")
+            else:
+                log.info("chatnd: razao - stream terminou SEM usage (modelo=%s); a resposta "
+                         "NAO entrou no razao - confira se o motor honra stream_options",
+                         _ev.get("modelo_rota"))
         if not viu:
             falso = {
                 "id": "chatnd-instabilidade",
@@ -5322,7 +5423,7 @@ class Pipe:
         if hasattr(resp, "body_iterator"):
             if audio_ctx is not None:
                 log.info("chatnd: audio pedido + resposta em STREAM -> hook de sintese ligado")
-            resp.body_iterator = self._stream_resiliente(resp.body_iterator, audio_ctx)
+            resp.body_iterator = self._stream_resiliente(resp.body_iterator, audio_ctx, _ev)
             return resp
         if audio_ctx is not None:
             log.warning("chatnd: audio pedido mas resposta NAO e stream (sem body_iterator) "
@@ -5349,6 +5450,17 @@ class Pipe:
                 except Exception:
                     d = None
         if isinstance(d, dict):
+            # 1.67.2: resposta final SEM stream - o usage vem no proprio JSON e ainda da
+            # tempo de entrar pelo _registrar do finally (este metodo roda antes dele).
+            if _ev is not None and not d.get("error"):
+                try:
+                    _p, _c, _ = _extrair_usage(d)
+                    if _p is not None or _c is not None:
+                        _ev["tok_resposta_prompt"] = _p
+                        _ev["tok_resposta_compl"] = _c
+                        _ev["resposta_modelo"] = _modelo_de_resposta(d) or _ev.get("modelo_rota")
+                except Exception:
+                    log.exception("chatnd: usage da resposta nao-stream nao lido (ignorado)")
             if d.get("error"):
                 log.error("chatnd: motor devolveu erro: %s", str(d.get("error"))[:500])
                 if _ev is not None:
@@ -5672,11 +5784,21 @@ class Pipe:
                 "ms": ev.get("latencia_ms"),
             }
             linhas = []
+            # 1.67.2: o modelo e o da RESPOSTA (snapshot), com o valve de reserva.
+            # `ev['classificador']` e a categoria e `ev['origem_modelo']` e o wrapper
+            # do Open WebUI - os dois estavam aqui e nenhum e modelo de tarifa.
             for acao, mod, prov, tp, tc in (
-                ("classificador", ev.get("classificador"), ev.get("classif_provedor"),
+                ("classificador",
+                 ev.get("classif_modelo") or getattr(self.valves, "ROUTER_MODEL", None),
+                 ev.get("classif_provedor"),
                  ev.get("tok_classif_prompt"), ev.get("tok_classif_compl")),
-                ("gerador", ev.get("origem_modelo"), None,
+                ("gerador",
+                 ev.get("gerador_modelo") or getattr(self.valves, "GERADOR_MODEL", None),
+                 None,
                  ev.get("tok_gerador_prompt"), ev.get("tok_gerador_compl")),
+                # a resposta FINAL da rota (stream ou nao) - vem por _medir_resposta
+                ("resposta", ev.get("resposta_modelo"), None,
+                 ev.get("tok_resposta_prompt"), ev.get("tok_resposta_compl")),
             ):
                 ti, to = _n(tp), _n(tc)
                 # NADA A CONTAR NAO VIRA LINHA DE ZERO. Uma enxurrada de linhas
@@ -5737,6 +5859,25 @@ class Pipe:
             log.exception(
                 "chatnd: razao de custo best-effort falhou (ignorado - a resposta segue)"
             )
+
+    async def _medir_resposta(self, ev, p, c, modelo, origem):
+        # 1.67.2: registra SO a linha `resposta` no razao. Chamado no FIM do stream
+        # (o `_registrar` do finally ja passou - o usage nao existia ainda). Copia o
+        # ev para levar quem/rota/latencia e ZERA as outras acoes, senao o classificador
+        # entraria duas vezes. Best-effort como tudo aqui.
+        try:
+            ev2 = dict(ev or {})
+            for k in ("tok_classif_prompt", "tok_classif_compl",
+                      "tok_gerador_prompt", "tok_gerador_compl"):
+                ev2[k] = None
+            ev2["tok_resposta_prompt"] = p
+            ev2["tok_resposta_compl"] = c
+            ev2["resposta_modelo"] = modelo
+            log.info("chatnd: razao - resposta (%s) modelo=%s tokens=%s/%s",
+                     origem, modelo, p, c)
+            await self._medir_ia_uso(ev2)
+        except Exception:
+            log.exception("chatnd: razao da resposta falhou (ignorado - a resposta ja foi)")
 
     async def _ler_bytes_storage(self, fo):
         # BYTES BRUTOS do upload original (o codigo-fonte literal, com <script> e handlers).
@@ -5947,6 +6088,7 @@ class Pipe:
                 _ev["tok_gerador_prompt"] = (_ev.get("tok_gerador_prompt") or 0) + p
             if c is not None:
                 _ev["tok_gerador_compl"] = (_ev.get("tok_gerador_compl") or 0) + c
+            _ev["gerador_modelo"] = _modelo_de_resposta(res) or self.valves.GERADOR_MODEL
         return _parse_json(_extrair_conteudo(res))
 
     @staticmethod
@@ -6911,6 +7053,13 @@ class Pipe:
             _ev["chars_sistema"] = len(VOZ_TRIADE)   # 2a: system do pipe nas rotas de conversa
 
         body["model"] = rota.get(categoria, self.valves.MODELO_GERAL)
+        _ev["modelo_rota"] = body["model"]   # reserva, se o chunk nao declarar o modelo
+        # 1.67.2: sem isto a OpenAI NAO manda usage em streaming, e o custo da resposta
+        # - o maior do turno - ficava fora do razao. Parametro documentado da API de
+        # Chat Completions; o router do OWUI o repassa (e o remove sozinho no caminho
+        # da Responses API, que ja traz usage por conta propria).
+        if body.get("stream") and not body.get("stream_options"):
+            body["stream_options"] = {"include_usage": True}
         try:
             resp = await generate_chat_completion(
                 __request__, body, user, bypass_filter=True
