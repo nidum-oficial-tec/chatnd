@@ -1,9 +1,34 @@
 """
 title: ChatND
 author: Nidum
-version: 1.66.1
+version: 1.67.0
 description: Roteador automatico. Classifica o pedido (gpt-5-mini) e encaminha para o modelo NIDUM adequado. Na rota de documentos faz RAG da base institucional. Na rota de arquivo, gera a estrutura com gpt-5.1 e chama a ferramenta gerador_de_arquivos_nidum (inclusive com imagens anexadas pelo usuario). Na rota de imagem, gera a imagem via Gemini (motor oculto). Audio anexado e transcrito (Whisper local) e vira o pedido, roteado como texto. O usuario nao escolhe o motor.
 changelog:
+  1.67.0:
+    - O CUSTO DO CHATND PASSA A CHEGAR AO RAZAO DA CASA. A Nidum tinha CINCO
+      contabilidades de token e nenhuma somava com a outra; o `chatnd_analytics.db`
+      deste pipe era a SEXTA - local ao conteiner e invisivel para o resto.
+      `_registrar` agora tambem manda a contagem para `ia_uso` (Supabase de
+      producao), de onde saem o relatorio por ferramenta e por pessoa.
+    - POR QUE AQUI E NAO NUM FILTER: o filter `nidum_medidor` foi publicado,
+      ligado global e rodado numa conversa real - e recebeu `usage recebido = {}`.
+      Para o Open WebUI o PIPE E O MODELO, e este nao anexa `usage` a resposta.
+      O numero nunca sai daqui de dentro. O filter FICA, e nao se sobrepoe: ele
+      so dispara com `usage` preenchido, que e o caso de um modelo ligado por
+      conexao DIRETA - o que este pipe nao ve. Ver a invariante no cabecalho dele.
+    - UMA LINHA POR CHAMADA, e nao uma por turno: classificador e gerador sao
+      modelos diferentes, muitas vezes de provedores diferentes, e some-los
+      apagaria justamente o que a conta existe para mostrar (se o roteamento para
+      o modelo pequeno esta funcionando, ou nao).
+    - A PESSOA VAI EM PSEUDONIMO (decisao do Davi): o `user_hash` com sal deste
+      pipe NAO e desfeito - o razao recebe "anon:<hash>". O prefixo existe para
+      ninguem confundir com e-mail na coluna de quem.
+    - VAI ANTES DO GATE DA VALVE `ANALYTICS_ON`, de proposito: aquela valve
+      governa a analitica de PRODUTO; o razao e a contabilidade de DINHEIRO da
+      casa. Desligar uma nao pode parar a outra em silencio.
+    - Melhor-esforco em thread, como o resto do `_registrar`: nunca levanta, e
+      sem IA_USO_TOKEN no ambiente sai calado.
+
   1.66.1:
     - OS CONTADORES DA 1.66.0 NAO CHEGAVAM AO BANCO. `recusa_tool`, `recusa_salva`
       e `recusa_final` foram escritos em `_ev` e nunca acrescentados ao CREATE
@@ -5540,6 +5565,12 @@ class Pipe:
                     ev.get("tok_gerador_prompt"), ev.get("tok_gerador_compl"),
                     ev.get("classif_provedor"),
                 )
+            # RAZAO DE CUSTO DA CASA (19-09-2026) - vai ANTES do gate da valve, de
+            # proposito: `ANALYTICS_ON` governa a analitica de PRODUTO do ChatND;
+            # o razao `ia_uso` e a contabilidade de DINHEIRO das sete frentes da
+            # Nidum. Desligar uma nao pode parar a outra em silencio - e silencio
+            # no contador se le como economia.
+            await self._medir_ia_uso(ev)
             if not getattr(self.valves, "ANALYTICS_ON", True):
                 return
             if not ev:
@@ -5555,6 +5586,109 @@ class Pipe:
         except Exception:
             log.exception(
                 "chatnd: analytics best-effort falhou (ignorado - a resposta segue)"
+            )
+
+    async def _medir_ia_uso(self, ev):
+        # POR QUE AQUI, E NAO NUM FILTER (medido em 19-09-2026)
+        # O filter `nidum_medidor` foi publicado, ligou global, rodou - e recebeu
+        # `usage recebido = {}`. A causa: para o Open WebUI o PIPE E O MODELO, e
+        # ele nao anexa `usage` nenhum a resposta. O numero nunca sai daqui de
+        # dentro. Ja este metodo esta no unico lugar que TEM os numeros.
+        #
+        # UMA LINHA POR CHAMADA AO MODELO, e nao uma por turno: o classificador e
+        # o gerador sao modelos diferentes, muitas vezes de provedores diferentes,
+        # e some-los apagaria justamente o que a conta existe para mostrar (que o
+        # roteamento para um modelo pequeno esta funcionando, ou nao).
+        #
+        # A PESSOA VAI EM PSEUDONIMO (decisao do Davi, 19-09). O pipe anonimiza de
+        # proposito (`user_hash`, com sal) e o razao nao desfaz isso: manda
+        # "anon:<hash>". O prefixo existe para ninguem confundir com um e-mail na
+        # coluna de quem. Trocar para e-mail um dia e uma linha - mas e conversa
+        # com quem definiu o ANALYTICS_USER_SALT, nao decisao de codigo.
+        #
+        # Melhor-esforco, como todo o resto deste metodo: nunca levanta, roda em
+        # thread, e sem IA_USO_TOKEN no ambiente sai calado (o intervalo entre
+        # publicar e por o segredo e previsto).
+        try:
+            url = (os.environ.get("IA_USO_URL") or "").strip()
+            token = (os.environ.get("IA_USO_TOKEN") or "").strip()
+            if not url or not token or not ev:
+                return
+
+            def _n(v):
+                try:
+                    i = int(v or 0)
+                    return i if i > 0 else 0
+                except (TypeError, ValueError):
+                    return 0
+
+            def _fornecedor(modelo, declarado):
+                if declarado:
+                    return str(declarado)
+                m = str(modelo or "").lower()
+                # Heuristica DECLARADA: o `ev` so traz provedor do classificador.
+                if m.startswith(("gpt", "o1", "o3", "o4")):
+                    return "openai"
+                if m.startswith("claude"):
+                    return "anthropic"
+                if m.startswith("gemini"):
+                    return "google"
+                return "desconhecido"
+
+            quem = ev.get("user_hash")
+            quem = ("anon:" + str(quem)[:16]) if quem else None
+            base = {
+                "ferramenta": "conversa",
+                "email": quem,
+                "ref_tipo": "rota",
+                "ref_id": ev.get("rota"),
+                "ms": ev.get("latencia_ms"),
+            }
+            linhas = []
+            for acao, mod, prov, tp, tc in (
+                ("classificador", ev.get("classificador"), ev.get("classif_provedor"),
+                 ev.get("tok_classif_prompt"), ev.get("tok_classif_compl")),
+                ("gerador", ev.get("origem_modelo"), None,
+                 ev.get("tok_gerador_prompt"), ev.get("tok_gerador_compl")),
+            ):
+                ti, to = _n(tp), _n(tc)
+                # NADA A CONTAR NAO VIRA LINHA DE ZERO. Uma enxurrada de linhas
+                # zeradas faria o relatorio parecer barato justamente quando a
+                # contagem parou de chegar.
+                if not ti and not to:
+                    continue
+                linha = dict(base)
+                linha.update({
+                    "acao": acao,
+                    "modelo": str(mod) if mod else None,
+                    "fornecedor": _fornecedor(mod, prov),
+                    "tokens_in": ti, "tokens_out": to,
+                    "tokens_cache_w": 0, "tokens_cache_r": 0,
+                })
+                linhas.append(linha)
+            if not linhas:
+                return
+
+            def _enviar():
+                import urllib.request
+                req = urllib.request.Request(
+                    url,
+                    data=json.dumps(linhas).encode("utf-8"),
+                    method="POST",
+                    headers={"content-type": "application/json",
+                             "authorization": "Bearer " + token},
+                )
+                try:
+                    with urllib.request.urlopen(req, timeout=8) as r:
+                        if r.status >= 300:
+                            log.debug("chatnd: coletor respondeu %s", r.status)
+                except Exception as e:  # noqa: BLE001
+                    log.debug("chatnd: nao registrou no razao (%s)", e)
+
+            await asyncio.to_thread(_enviar)
+        except Exception:
+            log.exception(
+                "chatnd: razao de custo best-effort falhou (ignorado - a resposta segue)"
             )
 
     async def _ler_bytes_storage(self, fo):
