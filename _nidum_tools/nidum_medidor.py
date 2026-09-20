@@ -2,7 +2,7 @@
 """
 title: Nidum Medidor
 author: Nidum
-version: 0.1.0
+version: 0.2.0
 description: Manda ao razao `ia_uso` (Supabase de producao) quantos tokens cada resposta gastou, por pessoa e por modelo. Nao muda a resposta, nao entra no caminho dela, e some sozinho sem IA_USO_TOKEN.
 required_open_webui_version: 0.5.0
 """
@@ -40,10 +40,21 @@ required_open_webui_version: 0.5.0
 # responde com `usage` de verdade e nao passa por roteador nenhum. Sem ele, esse
 # gasto ficaria fora da conta da casa sem ninguem notar.
 #
-# !! A INVARIANTE, para quem mexer no pipe depois: se um dia o `chatnd` passar a
-# ANEXAR `usage` a resposta, os dois contariam a MESMA chamada e o relatorio
-# dobraria. Quem fizer essa mudanca tem de desligar este filter no mesmo
-# movimento.
+# !! A INVARIANTE ACONTECEU - E AGORA ELA E CODIGO, NAO AVISO (0.2.0, 19-09-2026)
+# O aviso que morava aqui dizia: se um dia o `chatnd` passar a ANEXAR `usage`, os
+# dois contariam a MESMA chamada e o relatorio dobraria. Foi exatamente o que
+# aconteceu: a 1.67.2 do pipe passou a pedir `stream_options.include_usage` para
+# medir a resposta em stream, o Open WebUI passou a anexar o `usage` a mensagem, e
+# este filter acordou. Medido no razao em 19-09: `resposta` 78.183/756 as 22:57:26
+# e `pergunta` 78.183/756 as 22:57:27 - a mesma chamada, duas linhas.
+#
+# Confiar no aviso foi o erro: quem mexeu no pipe (eu) leu o comentario e nao o
+# cumpriu. A trava agora e do filter, e nao da memoria de quem edita: quando o
+# modelo da resposta e um PIPE que ja se mede (valve PIPES_QUE_SE_MEDEM), este
+# filter sai calado. Para o Open WebUI o pipe E o modelo, entao `body['model']`
+# chega como o id dele (`chatnd`) - nunca como um modelo de tarifa. E essa
+# diferenca que separa o duplicado do uso legitimo: numa CONEXAO DIRETA o modelo
+# chega com nome real (`gpt-5.1`, `claude-sonnet-4-6`) e a linha entra.
 #
 # ATENCAO - O QUE PRECISA SER CONFERIDO NUMA INSTANCIA VIVA
 # Medido no codigo em 19-09: o laco de SSE captura `usage`
@@ -118,6 +129,10 @@ class Filter:
         )
         APP: str = Field(default="chatnd", description="Nome da frente no razao.")
         FERRAMENTA: str = Field(default="conversa", description="Nome declarado em ia_apps.")
+        PIPES_QUE_SE_MEDEM: str = Field(
+            default="chatnd",
+            description="Ids de pipe que JA mandam o proprio custo ao razao (separados por virgula). O filter ignora a resposta deles - senao a mesma chamada entra duas vezes.",
+        )
         DEBUG: bool = Field(
             default=False,
             description="Escreve no log o usage que chegou. Ligue uma vez para conferir se a contagem chega - e desligue.",
@@ -159,6 +174,17 @@ class Filter:
             if not self.valves.URL or not self.valves.TOKEN:
                 return body
 
+            # 0.2.0: o modelo e o id do PIPE quando a resposta veio por um deles.
+            # Pipe que ja se mede sai daqui sem linha - a dele ja foi.
+            modelo = (body or {}).get("model") or ultima.get("model") or ""
+            pipes = [p.strip() for p in str(self.valves.PIPES_QUE_SE_MEDEM or "").split(",") if p.strip()]
+            base = str(modelo).split(".", 1)[0]   # o OWUI pode prefixar: `chatnd.algo`
+            if base in pipes or str(modelo) in pipes:
+                if self.valves.DEBUG:
+                    log.info("nidum_medidor: %s ja manda o proprio custo ao razao - nada gravado "
+                             "(evita contar a mesma chamada duas vezes)", modelo)
+                return body
+
             cont = _de_usage(uso)
             # ATENCAO: nada a contar nao vira linha de zero. Uma enxurrada de
             # linhas zeradas faria o relatorio parecer barato justamente quando
@@ -175,8 +201,8 @@ class Filter:
                 "acao": "pergunta",
                 # O e-mail sai da SESSAO do Open WebUI, nao do corpo.
                 "email": (__user__ or {}).get("email"),
-                "modelo": (body or {}).get("model") or ultima.get("model"),
-                "fornecedor": "openai" if str((body or {}).get("model") or "").startswith(("gpt", "o1", "o3", "o4")) else "anthropic",
+                "modelo": modelo or None,
+                "fornecedor": "openai" if str(modelo).startswith(("gpt", "o1", "o3", "o4")) else "anthropic",
                 "ref_tipo": "conversa",
                 "ref_id": (body or {}).get("chat_id") or (body or {}).get("id"),
             })
