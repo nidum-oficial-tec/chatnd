@@ -1,9 +1,24 @@
 """
 title: ChatND
 author: Nidum
-version: 1.67.2
+version: 1.67.3
 description: Roteador automatico. Classifica o pedido (gpt-5-mini) e encaminha para o modelo NIDUM adequado. Na rota de documentos faz RAG da base institucional. Na rota de arquivo, gera a estrutura com gpt-5.1 e chama a ferramenta gerador_de_arquivos_nidum (inclusive com imagens anexadas pelo usuario). Na rota de imagem, gera a imagem via Gemini (motor oculto). Audio anexado e transcrito (Whisper local) e vira o pedido, roteado como texto. O usuario nao escolhe o motor.
 changelog:
+  1.67.3:
+    - AS TAREFAS DE BASTIDOR DO OPEN WEBUI NAO ENTRAVAM NO RAZAO, E SAO TRES POR
+      PERGUNTA. O log da 1.67.1 foi quem contou, em producao (20-09): depois de cada
+      resposta vinham `follow_up_generation`, `title_generation` e `tags_generation`,
+      todas para o ROUTER_MODEL, e as tres diziam `turno sem tokens capturados`.
+      Gasto real, invisivel - exatamente o que este razao existe para acabar.
+    - A CAUSA: o atalho do `__task__` devolve a resposta com `return` DIRETO, sem
+      passar pelo `_resposta_ou_aviso`, que e onde a 1.67.2 captura o `usage`. Medido
+      no Open WebUI vendorizado: toda tarefa interna e `stream: False`
+      (`routers/tasks.py`), entao o `usage` vem no proprio JSON e basta le-lo ali.
+    - A LINHA LEVA O NOME DA TAREFA como `acao` (`title_generation`, ...), e nao
+      `resposta`: soma-las apagaria de quanto custa o bastidor do Open WebUI, que e
+      justamente a pergunta nova que estes numeros abriram. Nenhuma chamada nova ao
+      modelo e nenhum envio novo ao coletor: escreve no `_ev` que o `finally` ja
+      grava. A resposta da tarefa NAO e tocada - medir nao pode mudar o que se mede.
   1.67.2:
     - A GERACAO CARA NAO ESTAVA NO RAZAO, E O MODELO GRAVADO ERA A ROTA. Primeira
       linha real do ChatND na plataforma (19-09): 2.458 tokens, `modelo=documentos`,
@@ -5797,7 +5812,10 @@ class Pipe:
                  None,
                  ev.get("tok_gerador_prompt"), ev.get("tok_gerador_compl")),
                 # a resposta FINAL da rota (stream ou nao) - vem por _medir_resposta
-                ("resposta", ev.get("resposta_modelo"), None,
+                # 1.67.3: `acao_resposta` deixa a linha levar o nome da TAREFA quando
+                # o turno foi de bastidor (title_generation, tags_generation, ...).
+                # Sem ela, o custo do bastidor se misturava ao da resposta ao usuario.
+                (ev.get("acao_resposta") or "resposta", ev.get("resposta_modelo"), None,
                  ev.get("tok_resposta_prompt"), ev.get("tok_resposta_compl")),
             ):
                 ti, to = _n(tp), _n(tc)
@@ -6496,9 +6514,29 @@ class Pipe:
                 "chatnd: tarefa interna '%s' -> %s (sem roteador, sem RAG)",
                 __task__, self.valves.ROUTER_MODEL,
             )
-            return await generate_chat_completion(
+            resp = await generate_chat_completion(
                 __request__, body, user, bypass_filter=True
             )
+            # 1.67.3: O RAZAO TAMBEM CONTA O BASTIDOR. Sao TRES chamadas por pergunta
+            # (follow_up, title, tags) e ate a 1.67.2 nenhuma entrava - o `return`
+            # direto pulava o unico ponto que le o `usage`. Toda tarefa interna do
+            # Open WebUI e `stream: False` (routers/tasks.py), entao o numero esta no
+            # proprio JSON. Escreve no `_ev`; quem grava e o `finally` do `pipe()`,
+            # como em qualquer turno - sem chamada nova e sem tocar a resposta.
+            try:
+                _p, _c, _ = _extrair_usage(resp)
+                if _p is not None or _c is not None:
+                    _ev["tok_resposta_prompt"] = _p
+                    _ev["tok_resposta_compl"] = _c
+                    _ev["resposta_modelo"] = (_modelo_de_resposta(resp)
+                                              or self.valves.ROUTER_MODEL)
+                    _ev["acao_resposta"] = str(__task__)[:40]
+                else:
+                    log.info("chatnd: razao - tarefa interna '%s' sem usage no corpo; "
+                             "nada gravado", __task__)
+            except Exception:  # noqa: BLE001
+                log.exception("chatnd: razao da tarefa interna falhou (ignorado)")
+            return resp
 
         # -------------------------------------------------------- VOZ - ENTRADA (1.54.0)
         # AUDIO anexado vira TEXTO A MONTANTE: o pedido falado passa a ser o user_prompt, e
