@@ -74,6 +74,7 @@ from open_webui.socket.main import (
     get_event_emitter,
 )
 from open_webui.utils.nidum_orcamento import orcar
+from open_webui.utils.nidum_contagem import contar, marcar_inicio
 from open_webui.utils.access_control import has_connection_access, has_permission
 from open_webui.utils.access_control.files import get_accessible_folder_files
 from open_webui.utils.chat import generate_chat_completion
@@ -3655,6 +3656,10 @@ async def streaming_chat_response_handler(response, ctx):
         for filter_id in await get_sorted_filter_ids(request, model, metadata.get('filter_ids', []))
     ]
 
+    # CONTAGEM DE USO (D81, paga em 21/09): o relogio do turno comeca aqui, antes
+    # de qualquer trabalho. Best-effort - sem isto so a latencia fica nula.
+    marcar_inicio(request)
+
     # Standard streaming response handler
     # event_caller is optional — only needed for direct (client-side) tools
     # and pyodide code interpreter. Server-side tools work without it.
@@ -5251,6 +5256,13 @@ async def streaming_chat_response_handler(response, ctx):
                     'output': output,
                     **({'usage': usage} if usage else {}),
                 }
+                # CONTAGEM DE USO - UMA linha por turno, do que o agente FEZ.
+                # Aqui, e nao antes: e o unico ponto onde o `output` esta
+                # completo (todos os itens de texto e de function_call). Vem
+                # DEPOIS do assistant_message e ANTES dos filtros de saida, que
+                # podem reescrever o texto - contar depois deles mediria o
+                # filtro, nao o agente. Ver nidum_contagem.py (D81, D85, D90).
+                contar(request, metadata, output)
                 await outlet_filter_handler(ctx)
                 await background_tasks_handler(ctx)
             except asyncio.CancelledError:
