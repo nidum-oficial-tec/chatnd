@@ -1,8 +1,13 @@
 # Checklist do dia do corte — o agente substitui o pipe
 
-> **Rascunho de 21/09/2026.** Adiado três vezes por ser "se sobrar tempo"; passou a ter lugar
-> fixo na fila por decisão do Davi, exatamente por isso. **É documento, não operação** — nada
-> aqui foi executado.
+> **21/09/2026 — ENSAIADO.** Adiado três vezes por ser "se sobrar tempo"; passou
+> a ter lugar fixo na fila por decisão do Davi, exatamente por isso. Os itens 1 e
+> 2 (conversa aberta e reversão) foram **executados em produção** em 21/09, com
+> autorização, e os números abaixo são medidos.
+>
+> **Contexto que simplificou tudo:** ninguém está usando o ChatND hoje. Sem
+> conversas abertas não há o que escoar, e o corte pelo `is_active` — o mais
+> barato, um comando — basta.
 >
 > **O corte não tem passo intermediário:** o agente substitui o pipe para todo mundo de uma vez.
 > Então o corte **é** o primeiro teste com uso real, e o checklist existe para que o primeiro dia
@@ -33,10 +38,10 @@ ninguém. Não é criado pelo corte, mas o corte é a hora de olhar.
 
 | # | o quê | por quê | estado |
 |---|---|---|---|
-| 1 | **Republicar a `estruturar_deck_beta` pela workflow, com sha** | hoje o carimbo é `[origem: LOCAL — sem sha, não rastreável ao repo]`. Aceito enquanto beta; **não** aceito quando virar produto. **Destravado em 21/09:** a workflow recusava o alvo — `type: choice` com lista fechada, e `estruturar_deck_beta` não estava nela. O `case` já tinha ramo genérico, então faltava só a linha. **O publish local só foi possível porque a workflow não aceitava o alvo** | ⬜ rodar a workflow |
+| 1 | **Republicar a `estruturar_deck_beta` pela workflow, com sha** | hoje o carimbo é `[origem: LOCAL — sem sha, não rastreável ao repo]`. Aceito enquanto beta; **não** aceito quando virar produto. **Destravado em 21/09:** a workflow recusava o alvo — `type: choice` com lista fechada, e `estruturar_deck_beta` não estava nela. O `case` já tinha ramo genérico, então faltava só a linha. **O publish local só foi possível porque a workflow não aceitava o alvo** | ✅ **FEITO em 21/09**: `[origem: repo df8023dda15b ref medicao/fase2-consertos run 35644727299]`. A guarda de branch **não bloqueia** publicar de fora da `main` — ela avisa no sumário e carimba a ref. Fica pendente republicar **da main** depois do merge |
 | 2 | ~~Fechar a régua do deck~~ · **RESOLVIDO em 21/09** | as 5 do pipe rodadas com o mesmo pedido: mediana **41** slides, **277** chars/slide. Agente: **32** e **281**. Os dois decks lidos pelo Davi — **conteúdo equivalente**. Ver [D91](08_Decisoes_e_Pendencias.md) | ✅ |
 | 3 | ~~Confirmar o que o Chico usa como base~~ · **RESOLVIDO em 21/09** | **o Chico está aposentado e sai junto no corte** (Davi). A pergunta era se o corte atingiria outro colaborador; não atinge, porque o motor dele deixa de existir na mesma operação. O `CLAUDE.md` ainda afirma que ele usa o `chatnd` como base model — **está desatualizado** (a instância diz `claude-sonnet-4-6`) e a linha sai no corte, junto com o resto | ✅ |
-| 4 | **Decidir a dívida do analytics (D81)** | o pipe grava cada turno na tabela `eventos`; o agente não grava nada. Depois do corte, a comparação seria entre um lado medido e outro lembrado | ⬜ decisão |
+| 4 | **A contagem de uso entra JUNTO com o corte** · decidido em 21/09 | não depois: quando o agente substituir o pipe, ele já precisa contar. Mínimo acordado: **pessoas, perguntas, vazias/erro/truncadas**, na mesma tabela `eventos`, com coluna **`origem`** separando `pipe` de `agente`. "Truncada" pela heurística do [D85](08_Decisoes_e_Pendencias.md). **Meio dia, backend — vai por deploy** | ⬜ implementar |
 
 > **Com o 2 e o 3 fechados em 21/09, nenhum pré-requisito adia o corte.** O 1 é uma execução da workflow; o 4 é uma decisão que pode ser tomada depois, aceitando a dívida — desde que aceitá-la seja escolha, e não esquecimento.
 
@@ -55,12 +60,20 @@ diferentes no mesmo seletor, e é isso que torna a troca menos trivial do que "r
 | **B — desativar a function e renomear o preset** | um `chatnd` só | conversa **aberta** no pipe aponta para um id que sumiu (ver §2) |
 | **C — trocar o id do preset para `chatnd`** | id e nome certos | colide com a function enquanto ela existir; e **id de preset não se troca** pela API sem recriar, o que perde o histórico de acesso |
 
-**Recomendado: B, em duas etapas separadas por dias.** Primeiro renomeia o preset e desativa a
-function; depois, com o uso estabilizado, resolve o id. Fazer as duas coisas no mesmo dia
-mistura dois modos de falha diferentes na mesma janela.
+**DECIDIDO: caminho B, pelo `is_active`** (Davi, 21/09). Com zero conversas abertas não há o
+que escoar, e é o caminho mais barato — um comando, reversão em 2,4 s.
 
-⬜ **Antes de executar:** conferir se `is_active: false` na function a some do seletor sem
-apagá-la. É o que permite a reversão em minutos.
+✅ **Medido no ensaio:** `is_active: false` **some do seletor sem apagar a function**. O seletor
+foi de 12 para 11 entradas e o `chatnd` sumiu:
+
+```
+SELETOR no corte: 11 entradas | 'chatnd' presente: False
+['gpt-5-mini', 'gpt-5.1', 'claude-sonnet-4-6', 'claude-opus-4-8', 'claude-haiku-4-5',
+ 'arena-model', 'chico-m1', 'nidum-identificador-ambientes', 'nidum-10---documentos',
+ 'nidum-10---dia-a-dia', 'chatnd-agente-beta']
+```
+
+⏱️ **CORTE: 1,9 s** (desativar a function + renomear o preset).
 
 ---
 
@@ -74,15 +87,25 @@ página, 10 apontam para `chatnd-agente-beta` e 1 para `nidum-10---documentos`. 
 gravada com `models: ["chatnd"]` continuará pedindo `chatnd` depois do corte. Se a function
 estiver desativada, a próxima mensagem naquela conversa vai para um modelo que não existe mais.
 
-⬜ **Teste obrigatório antes do corte, e ele é barato:**
-1. abrir uma conversa no pipe, mandar uma mensagem;
-2. desativar a function;
-3. **voltar à mesma conversa e mandar outra mensagem**;
-4. registrar o que acontece: erro, silêncio, ou queda para o modelo padrão.
+✅ **TESTADO em 21/09 — e nenhuma das três hipóteses estava certa.**
 
-**Sem esse teste o checklist está adivinhando.** As três saídas pedem respostas diferentes: erro
-visível é aceitável (o usuário reabre), silêncio é inaceitável, e queda para o modelo padrão é o
-pior — a pessoa segue conversando **sem acervo** e sem saber.
+Eu previa erro, silêncio ou queda para o modelo padrão. **Aconteceu uma quarta: continuou
+funcionando.** Com a function desativada, a conversa antiga foi atendida **pelo pipe**:
+
+```
+3. CONVERSA ABERTA (a mesma do passo 1, que aponta para 'chatnd')
+   ok=True  49s
+   -> [Acervos]  A Nidum identifica casas com potencial ainda nao explorado...
+```
+
+O marcador `[Acervos]` só o pipe emite. **`is_active=False` tira do seletor, mas não impede a
+execução de quem pede a function pelo id.**
+
+**O que isso muda, e não é detalhe:** o corte pelo `is_active` **não é "todo mundo de uma vez"**.
+Conversa nova nasce com o agente; conversa aberta segue no pipe. É **migração suave**, não corte.
+
+Hoje isso não custa nada — não há conversas abertas. Mas **é por isso que o pipe precisa de data
+de remoção** (abaixo): sem ela, uma conversa esquecida mantém o pipe vivo para sempre.
 
 ---
 
@@ -101,12 +124,47 @@ pior — a pessoa segue conversando **sem acervo** e sem saber.
 | 4 | **reverter**: reativar a function, devolver o nome do preset | cronometrar |
 | 5 | conversar de novo, pelo pipe | o pipe responde como antes |
 
-⬜ **Meta: reversão completa em menos de 5 minutos.** Se levar mais, o caminho está errado e
-precisa de script, não de disciplina.
+✅ **MEDIDO em 21/09: reversão completa em 2,4 s.** A meta era 5 minutos.
+
+```
+2. CORTE     1.9s | function is_active=False | preset name=chatnd
+6. REVERSAO  2.4s | function is_active=True  | preset name=ChatND Agente beta
+```
+
+Restauração conferida por leitura: `is_active=True`, nome do preset original, `toolIds` intactos,
+seletor de volta a 12, e o pipe respondendo em conversa nova com `[Fonte + Acervos]`.
+
+> **Um `HTTP 400` apareceu** ao mandar mensagem na conversa antiga logo após a reversão.
+> **Investigado em 21/09 e NÃO REPRODUZ** — nem com o mesmo id de mensagem, nem refazendo a
+> janela pós-toggle (que funcionou em 10 s). Fica como **transitório de causa desconhecida**. O
+> que o plano B precisava saber está verificado por outro caminho: **a conversa antiga responde
+> normalmente depois da reversão**, testado duas vezes.
 
 ⚠️ **O que a reversão NÃO desfaz** — e precisa estar escrito antes, não descoberto depois:
 as conversas tidas com o agente durante a janela **continuam existindo** e apontando para o
 preset. Reverter devolve o seletor, não o histórico.
+
+---
+
+## 3b. A remoção do pipe — com data, para não virar o pipe eterno
+
+> **Decisão do Davi, 21/09:** o pipe é **removido de vez uma semana após o corte**, se o agente
+> estiver estável.
+
+**Por que precisa de data, e não de critério:** o corte pelo `is_active` é migração suave — o
+pipe continua servindo quem já está numa conversa. Sem prazo, "desativado" vira um estado
+permanente, e o projeto fica com dois motores para manter, um deles invisível no seletor e vivo
+no código. **Data evita isso; "quando estabilizar" não.**
+
+| | |
+|---|---|
+| **corte** | D |
+| **remoção do pipe** | **D + 7 dias** |
+| **condição** | o agente estável — nenhum dos três sinais de reverter (abaixo) tendo ocorrido |
+| **o que "remover" significa** | a function `chatnd` sai de vez; o `CLAUDE.md` perde a linha do Chico e a seção do pipe; a doc de produção é atualizada no mesmo PR |
+
+⚠️ **Antes de remover, conferir se alguma conversa ainda aponta para `chatnd`** — a consulta está
+na seção 5. Conversa que apontar vai parar de funcionar de vez, e aí sim sem reversão barata.
 
 ---
 
@@ -154,11 +212,49 @@ confirmação estatística — são qualitativos e visíveis na primeira ocorrê
 
 ---
 
+## 5. A consulta de uso
+
+**Quantas conversas ainda apontam para o pipe** — a pergunta que decide se a remoção em D+7 é
+segura:
+
+```python
+# lista os chats e conta por modelo. Content-free: so o id do modelo.
+from collections import Counter
+cnt = Counter()
+for ch in api("/api/v1/chats/list?page=1"):
+    det = api("/api/v1/chats/%s" % ch["id"])
+    for m in ((det.get("chat") or {}).get("models") or []):
+        cnt[m] += 1
+print(cnt.most_common())
+```
+
+**Medido em 21/09:** dos 11 chats da primeira página, **10** apontam para
+`chatnd-agente-beta` e **1** para `nidum-10---documentos`. Nenhum para `chatnd` — mas são
+os chats de teste desta sessão, **não** o universo. Antes de remover, rodar sobre **todas** as
+páginas.
+
+**E a contagem de uso do dia do corte** sai da tabela `eventos`
+(`chatnd_analytics.db`, em `DATA_DIR`), com a coluna `origem` nova:
+
+```sql
+SELECT origem,
+       COUNT(DISTINCT user_hash)                      AS pessoas,
+       COUNT(*)                                       AS perguntas,
+       SUM(desfecho = 'vazio')                        AS vazias,
+       SUM(desfecho = 'erro')                         AS com_erro,
+       SUM(desfecho = 'truncado')                     AS truncadas,
+       CAST(AVG(latencia_ms) AS INT)                  AS latencia_media
+  FROM eventos
+ WHERE ts >= date('now')
+ GROUP BY origem;
+```
+
+---
+
 ## O que este checklist ainda não tem
 
-1. **O teste da conversa aberta (§2) não foi feito.** É a maior lacuna: três saídas possíveis,
-   e a pior delas é silenciosa.
-2. **A reversão não foi exercitada (§3).**
+1. ~~O teste da conversa aberta~~ · **FEITO em 21/09** — e refutou as três hipóteses.
+2. ~~A reversão não foi exercitada~~ · **FEITA em 21/09**, 2,4 s.
 3. **Nenhum número do agente existe do lado do analytics** (D81) — o primeiro dia será observado
    por log e por relato, não por série.
 4. **O `CLAUDE.md` precisa perder a linha do Chico** — ele sai no corte, e a doc
