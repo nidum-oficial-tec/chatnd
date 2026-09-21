@@ -38,7 +38,7 @@ ninguém. Não é criado pelo corte, mas o corte é a hora de olhar.
 | 3 | ~~Confirmar o que o Chico usa como base~~ · **RESOLVIDO em 21/09** | **o Chico está aposentado e sai junto no corte** (Davi). A pergunta era se o corte atingiria outro colaborador; não atinge, porque o motor dele deixa de existir na mesma operação. O `CLAUDE.md` ainda afirma que ele usa o `chatnd` como base model — **está desatualizado** (a instância diz `claude-sonnet-4-6`) e a linha sai no corte, junto com o resto | ✅ |
 | 4 | **Decidir a dívida do analytics (D81)** | o pipe grava cada turno na tabela `eventos`; o agente não grava nada. Depois do corte, a comparação seria entre um lado medido e outro lembrado | ⬜ decisão |
 
-> O item 3 é o único que pode **adiar** o corte. Os outros três atrasam, não impedem.
+> **Com o 2 e o 3 fechados em 21/09, nenhum pré-requisito adia o corte.** O 1 é uma execução da workflow; o 4 é uma decisão que pode ser tomada depois, aceitando a dívida — desde que aceitá-la seja escolha, e não esquecimento.
 
 ---
 
