@@ -145,12 +145,17 @@ def linhas_do_log(n=800):
                            cwd=_RAIZ)   # <- o diretorio LINKADO, nao o da bateria
         if o.returncode != 0 and o.stderr:
             print("  (railway rc=%s: %s)" % (o.returncode, o.stderr.strip()[:160]))
-        return o.stdout
+        # `or ""`: o CLI pode devolver stdout None (medido em 21/09, com o
+        # `--filter` que a versao 5.43 nao aceita). None aqui virava
+        # AttributeError e derrubava a bateria ANTES da primeira chamada -
+        # erro barulhento, ao menos, mas no meio de uma medicao paga.
+        return o.stdout or ""
     try:
         saida = _roda(base + ["--filter", "nidum_orcamento"])
     except Exception as e:
         print("  (railway logs falhou: %s)" % e)
         saida = ""
+    saida = saida or ""
     linhas = [l for l in saida.splitlines() if "nidum_orcamento" in l]
     if not linhas:
         try:
@@ -158,6 +163,7 @@ def linhas_do_log(n=800):
         except Exception as e:
             print("  (railway logs cru falhou: %s)" % e)
             return []
+        saida = saida or ""
         linhas = [l for l in saida.splitlines() if "nidum_orcamento" in l]
     return linhas
 

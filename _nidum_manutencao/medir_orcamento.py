@@ -80,6 +80,13 @@ class Turno(object):
         self.pedido = 0
         self.entregue = 0
         self.cortes = 0
+        # TETO PROPRIO. Desde 21/09 o teto e PROPORCIONAL as partes do pedido
+        # (50.000 x n, n = tarefas do create_tasks do turno), entao ele MUDA de
+        # turno para turno - e pode mudar DENTRO do turno, quando o agente
+        # planeja no meio. Guardar um teto unico do arquivo comparava a1
+        # (teto 50.000) contra o teto do c1 (300.000) e imprimia "cauda: 0 de 5"
+        # com um turno acima do proprio teto. Cada turno carrega o seu.
+        self.teto = 0
 
     def __repr__(self):
         return "<turno %s pedido=%d entregue=%d>" % (
@@ -138,9 +145,25 @@ def ler(caminho):
                 atual = Turno()
             atual.pedido = max(atual.pedido, acum)
             atual.entregue += entregue
+            atual.teto = max(atual.teto, t)   # o maior teto que valeu no turno
             if entregue < tamanho:
                 atual.cortes += 1
     fecha(atual)
+    # DEDUP POR ROTULO. Concatenar arquivos de execucoes diferentes pode trazer
+    # o MESMO turno duas vezes - foi o que aconteceu em 21/09, quando uma rodada
+    # morreu no meio do c2 (deixando um turno PARCIAL) e a repeticao gravou o
+    # completo. Somados, davam entregue > pedido, que e impossivel e denuncia a
+    # dupla contagem. Fica o de maior demanda: o parcial e prefixo do completo.
+    if any(t.rotulo for t in turnos):
+        melhor = {}
+        for t in turnos:
+            chave = t.rotulo or id(t)
+            if chave not in melhor or t.pedido > melhor[chave].pedido:
+                melhor[chave] = t
+        if len(melhor) < len(turnos):
+            print("  (dedup: %d turno(s) repetido(s) por rotulo - ficou o mais completo)"
+                  % (len(turnos) - len(melhor)))
+        turnos = list(melhor.values())
     return turnos, teto, modos, por_tool
 
 
@@ -159,7 +182,9 @@ def regua(nome, turnos, teto):
         return None
     ent = [t.entregue for t in turnos]
     ped = [t.pedido for t in turnos]
-    acima = [v for v in ent if v > teto]
+    # CADA turno contra o SEU teto - ver a nota em Turno.teto.
+    acima = [t.entregue for t in turnos if t.entregue > (t.teto or teto)]
+    tetos = sorted(set((t.teto or teto) for t in turnos))
     d = {
         "n": len(turnos),
         "mediana": pct(ent, .5),
@@ -174,7 +199,11 @@ def regua(nome, turnos, teto):
     }
     print("%s" % nome)
     print("  turnos medidos ........ %d          <- o DENOMINADOR" % d["n"])
-    print("  teto declarado ........ %d chars" % teto)
+    if len(tetos) == 1:
+        print("  teto declarado ........ %d chars" % tetos[0])
+    else:
+        print("  tetos (por turno) ..... %s   <- proporcional as partes"
+              % ", ".join(str(x) for x in tetos))
     print("  MEDIANA (entregue) .... %d chars    <- NAO deve se mover entre as fases" % d["mediana"])
     print("  p75 ................... %d chars" % d["p75"])
     print("  p90 ................... %d chars" % d["p90"])
@@ -182,15 +211,20 @@ def regua(nome, turnos, teto):
     print("  CAUDA acima do teto ... %d de %d (%.1f%%)  <- deve ir a ZERO com o corte"
           % (d["acima"], d["n"], 100.0 * d["acima"] / d["n"]))
     if acima:
-        print("  pior turno ............ %d chars (%.1fx o teto)" % (d["pior"], 1.0 * d["pior"] / teto))
+        piores = [t for t in turnos if t.entregue > (t.teto or teto)]
+        pt = max(piores, key=lambda t: t.entregue)
+        print("  pior turno ............ %s: %d chars (%.1fx o teto de %d)"
+              % (pt.rotulo or "?", pt.entregue, 1.0 * pt.entregue / (pt.teto or teto),
+                 pt.teto or teto))
     print("  DEMANDA mediana/maxima  %d / %d chars   (o que o modelo PEDIU)"
           % (d["med_pedido"], d["max_pedido"]))
     print("  chamadas cortadas ..... %d" % d["cortes"])
     print("  por turno:")
     for t in turnos:
         marca = "  CORTOU" if t.cortes else ""
-        print("      %-28s entregue=%8d  pedido=%8d%s"
-              % ((t.rotulo or "(sem rotulo)")[:28], t.entregue, t.pedido, marca))
+        print("      %-28s entregue=%8d  pedido=%8d  teto=%7d%s"
+              % ((t.rotulo or "(sem rotulo)")[:28], t.entregue, t.pedido,
+                 t.teto or 0, marca))
     return d
 
 
@@ -247,9 +281,16 @@ def main():
             print("            ATIVO (veja 'modo no log'), ou existe tool que devolve")
             print("            conteudo por FORA daquele ponto unico.")
         else:
-            print("  VEREDITO: a MEDIANA CAIU. O teto virou mordaca - ele esta cortando")
-            print("            turno normal, nao so a cauda. SUBA o teto e meca de novo.")
-            print("            (o objetivo era a cauda; se o meio doeu, o numero esta errado)")
+            if dm < 0:
+                print("  VEREDITO: a MEDIANA CAIU. O teto virou mordaca - ele esta")
+                print("            cortando turno normal, nao so a cauda. SUBA o teto.")
+            else:
+                print("  VEREDITO: a MEDIANA SUBIU %+.0f%%. Isso NAO e o corte - um teto" % var)
+                print("            nao aumenta consumo. E sinal de que as duas fases NAO")
+                print("            SAO COMPARAVEIS: o agente variou de comportamento, ou")
+                print("            os prompts mudaram entre elas. A regua nao decide nada")
+                print("            assim - repita os MESMOS turnos ate a variacao dentro")
+                print("            de cada fase ficar menor que a diferenca entre elas.")
     return 0
 
 
