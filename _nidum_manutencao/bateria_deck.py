@@ -44,6 +44,9 @@ SERVICO = os.environ.get("RAILWAY_SERVICO", "ChatND")
 # Baseline do pipe, medido antes desta bateria (ver o desenho).
 PIPE_SLIDES = 22
 
+# As tools que o turno recebe. Ver a nota em uma_execucao.
+TOOL_IDS = ["estruturar_deck_beta", "gerador_de_arquivos_nidum"]
+
 # _TIPOS_EXIGEM_CORPO do gerador_de_arquivos_nidum.py:1117. Slide desses tipos
 # sem corpo e MUDO - falha, nao variacao.
 TIPOS_EXIGEM_CORPO = ("conteudo", "destaque", "divisao", "numerada", "cartoes")
@@ -51,7 +54,30 @@ TIPOS_EXIGEM_CORPO = ("conteudo", "destaque", "divisao", "numerada", "cartoes")
 # Os aliases de corpo que o gerador aceita (o campo canonico e "texto").
 CAMPOS_CORPO = ("texto", "corpo", "conteudo", "itens", "bullets", "cartoes")
 
-PEDIDO = (
+# O PEDIDO INTEIRO estourou o gateway: 300,2s -> HTTP 502, chat com mensagem
+# de 0 chars. O limite e de 5 MINUTOS na borda, e o tempo vai quase todo na
+# varredura do acervo que o agente faz antes de estruturar.
+#
+# PARTIR O PEDIDO (decisao do Davi: tentar isto ANTES de mudar de caminho). A
+# regua so precisa da ESTRUTURA - contagem de slides, densidade e slides mudos
+# saem dela, nao do arquivo montado. Entao o turno 1 pede SO a estrutura, e a
+# geracao do arquivo (que nao e medida) fica de fora. Menos busca, menos tempo,
+# e o que se mede continua sendo o mesmo.
+PEDIDO_PARTIDO = (
+    # O NOME QUE O MODELO VE E O DO METODO (estruturar_deck), nao o id da tool
+    # (estruturar_deck_beta) - o OWUI expoe a funcao, nao o pacote. Pedir pelo id
+    # faz o modelo responder "essa ferramenta nao existe" e OFERECER a certa,
+    # o que parece falha de publicacao e e so o nome errado no pedido.
+    "Use a ferramenta estruturar_deck AGORA, de uma vez, para montar a "
+    "estrutura de uma apresentacao institucional da Nidum para investidores, "
+    "cobrindo: o que e a Nidum, o problema que resolve, o modelo de negocio, os "
+    "produtos, o estagio atual dos projetos, a governanca e o convite final. "
+    "NAO pesquise no acervo antes - passe o pedido direto para a ferramenta, que "
+    "ela cuida do conteudo. Depois me diga apenas quantos slides ela devolveu. "
+    "NAO gere o arquivo."
+)
+
+PEDIDO_INTEIRO = (
     "Monte uma apresentacao institucional da Nidum para investidores. "
     "Cubra: o que e a Nidum, o problema que ela resolve, o modelo de negocio, "
     "os produtos, o estagio atual dos projetos, a governanca e o convite final. "
@@ -138,6 +164,14 @@ def _slides_do_bruto(bruto):
     unico lugar onde a estrutura COMPLETA existe (o gerador consome e devolve
     um link). Procura o maior JSON com 'slides'.
     """
+    # O TRANSCRITO VEM HTML-ESCAPADO. O conteudo do chat guarda a saida da tool
+    # dentro de <details ...>, com &quot; no lugar das aspas e mais uma camada de
+    # escape do JSON: `\&quot;slides\&quot;`. Procurar por `"slides"` com aspas
+    # de verdade nao acha NADA - e o resultado sai 0 slides com a tool tendo
+    # funcionado, que e o pior formato de erro possivel (numero plausivel,
+    # fenomeno ausente). Desescapa antes de procurar.
+    bruto = (bruto.replace("&quot;", '"').replace("&amp;", "&")
+             .replace("&lt;", "<").replace("&gt;", ">").replace('\\"', '"'))
     melhor = None
     for m in re.finditer(r'\{[^{}]*"slides"\s*:\s*\[', bruto):
         i = m.start()
@@ -197,15 +231,28 @@ def avaliar(estrutura):
     return len(slides), dens, mudos
 
 
-def uma_execucao(i):
+def uma_execucao(i, pedido=None):
+    pedido = pedido or PEDIDO_PARTIDO
     chat_id = novo_chat("deck beta %d" % i)
     corpo = json.dumps({
         "model": MODELO,
-        "messages": [{"role": "user", "content": PEDIDO}],
+        "messages": [{"role": "user", "content": pedido}],
         "stream": True,
         "chat_id": chat_id,
         "id": "msg-deck-%d-%d" % (i, int(time.time())),
         "params": {"function_calling": "native"},
+        # TERCEIRA PORTA DA API, medida em 21/09 - e a familia das outras duas
+        # (stream:false e chat_id/id). O `toolIds` do PRESET e aplicado pela
+        # INTERFACE, nao pelo backend:
+        #     Chat.svelte:347   if (model?.info?.meta?.toolIds) {
+        #     Chat.svelte:2449  tool_ids: toolIds.length > 0 ? toolIds : undefined
+        #     middleware:2671   tool_ids = form_data.pop("tool_ids", None)
+        # Quem chama pela API e manda so o `model` NAO recebe tool de usuario
+        # nenhuma - nem as que estao anexadas ao preset. O sintoma e educado e
+        # enganoso: o agente responde "nao tenho acesso a nenhuma ferramenta
+        # chamada X" e LISTA as builtin, o que parece problema de publicacao ou
+        # de permissao. Nao e: e o corpo da requisicao.
+        "tool_ids": TOOL_IDS,
     }).encode("utf-8")
     req = urllib.request.Request(
         URL.rstrip("/") + "/api/chat/completions", data=corpo, method="POST",
@@ -235,13 +282,17 @@ def uma_execucao(i):
         "i": i, "chat_id": chat_id, "segundos": round(seg, 1), "erro_http": erro,
         "chars_bruto": len(bruto), "chars_prosa": len(prosa),
         "slides": n, "densidade": dens, "mudos": mudos,
-        "usou_tool": "estruturar_deck_beta" in bruto,
+        # NAO basta procurar o nome no texto: ele aparece no ECO do pedido e
+        # deu FALSO POSITIVO em 21/09 (usou_tool=True com zero chamadas). O
+        # marcador de uma chamada de verdade e o bloco <details name="...">.
+        # O atributo `name=` traz o METODO (estruturar_deck), nao o id da tool.
+        "usou_tool": 'name="estruturar_deck"' in bruto,
         "estrutura": est,
     }
 
 
 def regua(execucoes):
-    ns = sorted(e["slides"] for e in execucoes)
+    ns = sorted(e["slides"] for e in execucoes if e["slides"])
     ds = sorted(e["densidade"] for e in execucoes if e["slides"])
     med = ns[len(ns) // 2] if ns else 0
     med_d = ds[len(ds) // 2] if ds else 0
@@ -257,6 +308,16 @@ def regua(execucoes):
     print("  slides MUDOS .......... %d   (alvo: 0)" % mudos)
     print("  usaram a tool ......... %d de %d"
           % (sum(1 for e in execucoes if e["usou_tool"]), len(execucoes)))
+    multi = [e for e in execucoes if (e.get("chamadas_tool") or 0) > 1]
+    if multi:
+        print("  chamaram a tool 2x+ ... %d de %d  (execucoes %s)"
+              % (len(multi), len(execucoes), [e["i"] for e in multi]))
+    div = [e for e in execucoes
+           if e.get("slides_log") is not None
+           and e.get("slides_extraido") != e.get("slides_log")]
+    if div:
+        print("  parser divergiu ....... %d de %d  (valeu o log)"
+              % (len(div), len(execucoes)))
     print("")
     print("  [%s] mediana >= %d" % ("OK " if med >= alvo else "NAO", alvo))
     print("  [%s] zero slides mudos" % ("OK " if mudos == 0 else "NAO"))
@@ -271,6 +332,8 @@ def main():
     ap.add_argument("--n", type=int, default=1)
     ap.add_argument("--saida", default=None)
     ap.add_argument("--regua", default=None)
+    ap.add_argument("--inteiro", action="store_true",
+                    help="o pedido completo (estourou o gateway em 21/09)")
     a = ap.parse_args()
 
     if a.regua:
@@ -282,13 +345,34 @@ def main():
     for i in range(1, a.n + 1):
         print("[%d/%d] chamando o agente..." % (i, a.n))
         try:
-            e = uma_execucao(i)
+            e = uma_execucao(i, PEDIDO_INTEIRO if a.inteiro else PEDIDO_PARTIDO)
         except Exception as ex:
             print("  ERRO: %s" % ex)
             continue
         novas = [l for l in log_do_railway() if l not in antes]
         antes.update(novas)
         e["log_tool"] = [l for l in novas if "estruturar_deck_beta" in l]
+
+        # O LOG DA TOOL E A FONTE PRIMARIA DA CONTAGEM (decisao do Davi, 21/09).
+        # O transcrito do chat vem HTML-escapado e com uma segunda camada de
+        # escape do JSON; o parser acertou 3 de 5 e devolveu ZERO nas outras
+        # duas - com a tool tendo funcionado nas cinco. Zero que significa "nao
+        # consegui extrair" e o pior formato de erro possivel, e ja custou uma
+        # medicao hoje. A tool, por outro lado, REGISTRA o que produziu:
+        #     estruturar_deck_beta: estrutura com 30 item(ns), modelo=gpt-5.1
+        # Esse numero nao passa por escape nenhum. O extraido fica AO LADO, como
+        # conferencia - quando os dois divergem, quem manda e o log, e a
+        # divergencia aparece em vez de sumir.
+        registrados = [int(x) for x in
+                       re.findall(r"estrutura com (\d+) item", " ".join(e["log_tool"]))]
+        e["slides_log"] = max(registrados) if registrados else None
+        e["slides_extraido"] = e["slides"]
+        e["chamadas_tool"] = len(registrados)
+        if e["slides_log"] is not None:
+            if e["slides_extraido"] != e["slides_log"]:
+                print("     (divergencia: extraido=%s, log=%s -> vale o LOG)"
+                      % (e["slides_extraido"], e["slides_log"]))
+            e["slides"] = e["slides_log"]
         print("  %.0fs | slides=%d | densidade=%d | mudos=%d | usou a tool: %s"
               % (e["segundos"], e["slides"], e["densidade"], len(e["mudos"]),
                  e["usou_tool"]))
