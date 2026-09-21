@@ -18,6 +18,7 @@ O que este teste prova, em ordem:
      unico por onde os dois caminhos de execucao passam.
 """
 
+import json
 import importlib.util
 import io
 import os
@@ -47,6 +48,9 @@ def checa(nome, cond, extra=""):
 
 class _Estado(object):
     pass
+
+
+_MARCA = chr(10) + chr(10) + "[ORCAMENTO"
 
 
 class _Req(object):
@@ -135,6 +139,81 @@ def main():
           "from open_webui.utils.nidum_orcamento import orcar" in mw)
     checa("e CHAMA no ponto unico, antes do return de process_tool_result",
           re.search(r"tool_result = orcar\(request, tool_result, tool_function_name\)\s*\n\s*return tool_result, tool_result_files, tool_result_embeds", mw) is not None)
+
+    # ================================================== CORTE ESTRUTURAL (21/09)
+    print("")
+    print("corte estrutural: o que o modelo recebe continua sendo dado valido")
+    _conf(400, True)
+    chunks = [{"content": "trecho %d, e a lista vem por relevancia" % i}
+              for i in range(8)]
+    bruto = json.dumps({"results": chunks}, indent=2, ensure_ascii=False)
+    saida = _O.orcar(_Req(), bruto, "query_knowledge_files")
+    corpo = saida.split(_MARCA)[0]
+    try:
+        d = json.loads(corpo)
+        valido = True
+    except Exception:
+        d, valido = None, False
+    checa("lista cortada continua JSON VALIDO", valido)
+    checa("descarta ELEMENTOS inteiros, nao caracteres",
+          valido and 0 < len(d["results"]) < 8)
+    checa("os que ficam sao os PRIMEIROS (= os mais relevantes)",
+          valido and d["results"][0]["content"].startswith("trecho 0,"))
+    checa("o aviso conta TRECHOS, nao so chars", "trecho(s) descartados" in saida)
+
+    _conf(300, True)
+    doc = chr(10).join("linha %02d com conteudo" % i for i in range(40))
+    saida = _O.orcar(_Req(), doc, "view_file")
+    corpo = saida.split(_MARCA)[0]
+    checa("texto sem estrutura corta em FRONTEIRA DE LINHA",
+          corpo.endswith("conteudo"))
+
+    # ================================================== PAGINACAO (21/09)
+    print("")
+    print("paginacao: o documento que nao cabe continua, em vez de morrer cortado")
+    _conf(3000, True)
+    texto = chr(10).join("Secao %02d. %s" % (i, "corpo " * 20) for i in range(40))
+    payload = json.dumps({"id": "f1", "filename": "X.md", "content": texto,
+                          "total_chars": len(texto), "offset": 0,
+                          "returned_chars": len(texto)}, ensure_ascii=False)
+    saida = _O.orcar(_Req(), payload, "view_knowledge_file")
+    corpo = saida.split(_MARCA)[0]
+    try:
+        d = json.loads(corpo)
+        valido = True
+    except Exception:
+        d, valido = None, False
+    checa("o envelope sobrevive (JSON valido)", valido)
+    checa("id e filename preservados",
+          valido and d.get("id") == "f1" and d.get("filename") == "X.md")
+    checa("truncated=True e total_chars intacto",
+          valido and d.get("truncated") is True and d["total_chars"] == len(texto))
+    checa("next_offset aponta para a continuacao EXATA",
+          valido and texto[d["next_offset"]:][:30] == texto[len(d["content"]):][:30])
+    checa("o aviso ensina a continuar (offset=)", "offset=" in saida)
+    checa("e NAO manda parar de buscar", "NAO repita esta busca" not in saida)
+
+    # ============================================ TETO PROPORCIONAL (21/09)
+    print("")
+    print("teto proporcional: n vem do create_tasks DO TURNO, nunca do banco")
+    _O.AGENTE_MAX_CHARS_TURNO = 0        # 0 = proporcional
+    r = _Req()
+    checa("sem plano -> 1 parte (50.000)", _O._teto(r) == 50000)
+    plano = json.dumps({"tasks": [{"id": str(i), "content": "p%d" % i}
+                                  for i in range(5)]})
+    _O.orcar(r, plano, "create_tasks")
+    checa("5 tarefas -> 250.000, no MESMO turno", _O._teto(r) == 250000)
+    checa("TURNO NOVO nao herda o plano (a armadilha do chat)",
+          _O._teto(_Req()) == 50000)
+    r9 = _Req()
+    setattr(r9.state, "_nidum_orcamento_partes", 9)
+    checa("teto absoluto trava em 300.000", _O._teto(r9) == 300000)
+    _O.AGENTE_MAX_CHARS_TURNO = 45000
+    r5 = _Req()
+    setattr(r5.state, "_nidum_orcamento_partes", 5)
+    checa("teto FIXO desliga a proporcionalidade (comparar fases)",
+          _O._teto(r5) == 45000)
+    _O.AGENTE_MAX_CHARS_TURNO = 0
 
     print("")
     if FALHAS:

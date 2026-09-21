@@ -8,7 +8,8 @@
     "de turnos que estouram por caminhos DIFERENTES (c1 = leitura integral de um",
     "documento; c2 = enumeracao ampla, muitas buscas seguidas).",
     "Este arquivo e UTF-8 de proposito: os .py da casa sao ASCII-only, e prompt de",
-    "usuario com acento e dado, nao codigo."
+    "usuario com acento e dado, nao codigo.",
+    "TROCA DE 21/09: o c2 antigo (levantamento sobre a Fazenda Fortaleza) media 41.688 chars - ABAIXO do teto de 45.000. Dos dois caminhos de cauda so a leitura integral estourava, entao 'a cauda foi a zero' seria amostra de UM. O c2 novo pede enumeracao exaustiva de atas, que forca muitas buscas seguidas - o segundo caminho de estouro, por acumulo e nao por documento."
   ],
   "prompts": [
     {
@@ -44,8 +45,8 @@
     {
       "id": "c2",
       "bloco": "cauda",
-      "doc": 16,
-      "texto": "Faça um levantamento completo de tudo que o acervo tem sobre a Fazenda Fortaleza: documentos, atas, cronogramas e decisões. Não resuma — liste."
+      "doc": "novo em 21/09 (substitui o 14/16 do roteiro)",
+      "texto": "Liste TODAS as atas de reuniao de 2026 que existirem no acervo, uma por uma. Para cada uma: data, participantes, pauta e todas as decisoes registradas. Nao resuma, nao agrupe e nao pule nenhuma - quero a lista completa, ata a ata."
     }
   ]
 }

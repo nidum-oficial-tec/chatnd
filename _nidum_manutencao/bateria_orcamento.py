@@ -162,10 +162,53 @@ def linhas_do_log(n=800):
     return linhas
 
 
+# ---------------------------------------------------------------- o chat
+
+def novo_chat(folder_id, titulo):
+    """Cria um chat REAL e devolve o id.
+
+    POR QUE NAO UM chat_id INVENTADO (medido em 21/09/2026): com o emissor
+    ligado, o conteudo da resposta NAO volta pelo SSE - ele vai pelo canal de
+    eventos e e PERSISTIDO no chat
+    (`Chats.upsert_message_to_chat_by_id_and_message_id`, middleware). Com um
+    chat_id que nao existe, o upsert nao acha linha, a resposta se perde, e a
+    bateria gravava arquivo vazio: seis respostas de 3 chars, que e o separador.
+    Sem resposta guardada nao ha comparacao COM e SEM corte - que e o teste que
+    decide se o corte piora a qualidade.
+
+    O chat nasce DENTRO da pasta da medicao, e isso tambem e mais fiel: o
+    middleware le `Chats.get_chat_folder_id(chat_id)` ANTES do folder_id do
+    corpo (linha 2467), que e o caminho da interface de verdade.
+    """
+    novo = api("/api/v1/chats/new", {
+        "chat": {"title": titulo, "models": [MODELO], "messages": [], "history":
+                 {"messages": {}, "currentId": None}},
+        "folder_id": folder_id,
+    })
+    return novo["id"]
+
+
+def resposta_do_chat(chat_id, message_id):
+    """Le a resposta persistida. Devolve "" se nao achar - nunca levanta."""
+    try:
+        ch = api("/api/v1/chats/%s" % chat_id)
+        msgs = ((ch.get("chat") or {}).get("history") or {}).get("messages") or {}
+        m = msgs.get(message_id) or {}
+        if m.get("content"):
+            return m["content"]
+        # fallback: a ultima mensagem do assistente
+        for mm in reversed(list(msgs.values())):
+            if mm.get("role") == "assistant" and mm.get("content"):
+                return mm["content"]
+    except Exception as e:
+        print("  (nao consegui ler a resposta do chat: %s)" % e)
+    return ""
+
+
 # ---------------------------------------------------------------- os turnos
 
 def um_turno(p, folder_id):
-    """Roda UM prompt e devolve (texto, segundos). Turno = requisicao.
+    """Roda UM prompt e devolve (texto, segundos, tools). Turno = requisicao.
 
     STREAM=TRUE, E NAO E PREFERENCIA - E A UNICA FORMA DE HAVER O QUE MEDIR.
     Medido no codigo em 21/09/2026:
@@ -182,11 +225,33 @@ def um_turno(p, folder_id):
     falha do railway sem link: saida limpa, fenomeno ausente, conclusao invertida.
     """
     t0 = time.time()
+    chat_id = novo_chat(folder_id, "medicao %s" % p["id"])
+    message_id = "msg-%s-%d" % (p["id"], int(time.time()))
+    # CHAT_ID E ID SAO OBRIGATORIOS, e esta e a segunda razao de um turno nao
+    # executar ferramenta (medida em 21/09/2026, depois do stream):
+    #
+    #   middleware.get_event_emitter_and_caller (linha 3007):
+    #       if metadata.get("chat_id") and metadata.get("message_id"):
+    #           event_emitter = await get_event_emitter(metadata)
+    #   streaming_chat_response_handler (linha 3661):
+    #       if event_emitter:            <- o laco de ferramenta vive DENTRO
+    #
+    # Sem os dois campos o emissor e None, o `response_handler` inteiro nao e
+    # montado e o stream passa CRU: o servidor repassa o tool_call do modelo ao
+    # cliente, termina com finish_reason="tool_calls" e ninguem executa nada.
+    # Medido no SSE: 8 eventos, o ultimo pedindo `list_knowledge`, 3 segundos.
+    # O proprio comentario do codigo diz que o emissor "works for
+    # backend-initiated calls (automations, API)" - basta fornecer os campos.
+    #
+    # `id` vira metadata["message_id"] (main.py:1755 -> 2206); `chat_id` entra
+    # direto. Sao ids desta medicao, nao de um chat da interface.
     corpo = json.dumps({
         "model": MODELO,
         "messages": [{"role": "user", "content": p["texto"]}],
         "stream": True,
         "folder_id": folder_id,
+        "chat_id": chat_id,
+        "id": message_id,
         # Sem 'native' nao ha laco de ferramenta - e sem laco nao ha o que orcar.
         "params": {"function_calling": "native"},
     }).encode("utf-8")
@@ -214,7 +279,11 @@ def um_turno(p, folder_id):
                     partes.append(d["content"])
                 if d.get("tool_calls"):
                     ferramentas += len(d["tool_calls"])
-    return "".join(partes), time.time() - t0, ferramentas
+    seg = time.time() - t0
+    # A resposta vem do CHAT, nao do SSE - ver novo_chat(). O SSE fica como
+    # alternativa para o caso de o chat nao ter sido gravado.
+    texto = resposta_do_chat(chat_id, message_id) or "".join(partes)
+    return texto, seg, ferramentas
 
 
 def main():
