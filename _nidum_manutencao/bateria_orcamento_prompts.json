@@ -1,0 +1,51 @@
+{
+  "_leia_me": [
+    "Subconjunto DECLARADO da bateria de 19/09/2026 (registro-tecnico/avaliacoes/",
+    "TESTE_ORCAMENTO_TURNO_prompts.md). O campo 'doc' e o numero do prompt naquele",
+    "documento - os textos sao os mesmos, verbatim, para haver comparacao.",
+    "POR QUE UM SUBCONJUNTO: cada turno do agente e uma chamada paga. A mediana",
+    "so precisa de turnos que ficam ABAIXO do teto (a=controle, b=medio) e a cauda,",
+    "de turnos que estouram por caminhos DIFERENTES (c1 = leitura integral de um",
+    "documento; c2 = enumeracao ampla, muitas buscas seguidas).",
+    "Este arquivo e UTF-8 de proposito: os .py da casa sao ASCII-only, e prompt de",
+    "usuario com acento e dado, nao codigo."
+  ],
+  "prompts": [
+    {
+      "id": "a1",
+      "bloco": "controle",
+      "doc": 1,
+      "texto": "Qual o número máximo de coautores da Nidum?"
+    },
+    {
+      "id": "a2",
+      "bloco": "controle",
+      "doc": 2,
+      "texto": "Qual é o CNPJ da Nidum?"
+    },
+    {
+      "id": "b1",
+      "bloco": "medio",
+      "doc": 7,
+      "texto": "Quais são as etapas do cronograma da Fazenda Fortaleza?"
+    },
+    {
+      "id": "b2",
+      "bloco": "medio",
+      "doc": 6,
+      "texto": "O que a metodologia de gestão de projetos da Nidum define sobre a governança do EGP?"
+    },
+    {
+      "id": "c1",
+      "bloco": "cauda",
+      "doc": 10,
+      "texto": "Leia o NIDUM_DOCUMENTO_CONSTITUICAO por inteiro e me faça um resumo executivo de cada seção, sem pular nenhuma."
+    },
+    {
+      "id": "c2",
+      "bloco": "cauda",
+      "doc": 16,
+      "texto": "Faça um levantamento completo de tudo que o acervo tem sobre a Fazenda Fortaleza: documentos, atas, cronogramas e decisões. Não resuma — liste."
+    }
+  ]
+}
