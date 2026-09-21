@@ -45,6 +45,14 @@ on:
           - gerador_de_arquivos_nidum
           - relatorio_ambientes_nidum
           - sharepoint_nidum
+          # estruturar_deck_beta (21-09-2026): tool comum - cai no ramo
+          # generico do case abaixo, que ja monta
+          # `publicar_tool.py _nidum_tools/<alvo>.py`. So faltava o alvo na
+          # lista: `type: choice` recusa qualquer valor fora dela, e o
+          # publish LOCAL (sem sha) so era possivel porque a workflow nao
+          # aceitava o alvo. Pre-requisito do dia do corte - ver
+          # _nidum_docs/14.
+          - estruturar_deck_beta
           # nidum_medidor e um FILTER (19-09-2026) - no Open WebUI um filter
           # e uma FUNCTION, como o pipe, e nao uma TOOL: por isso ele entra
           # no ramo do publicar_pipe.py abaixo, e nao no generico.

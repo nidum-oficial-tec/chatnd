@@ -33,9 +33,9 @@ ninguém. Não é criado pelo corte, mas o corte é a hora de olhar.
 
 | # | o quê | por quê | estado |
 |---|---|---|---|
-| 1 | **Republicar a `estruturar_deck_beta` pela workflow, com sha** | hoje o carimbo é `[origem: LOCAL — sem sha, não rastreável ao repo]`. Aceito enquanto beta; **não** aceito quando virar produto | ⬜ a fazer |
-| 2 | **Fechar a régua do deck** — as 5 execuções do pipe, mesmo pedido | a densidade não tem baseline; 145% dos slides a 74% da densidade pode ser melhor ou enchimento, e o número não decide | ⬜ a fazer |
-| 3 | **Confirmar o que o Chico usa como base** | o `CLAUDE.md` diz que ele usa o `chatnd` como base model. **Medido em 21/09: `chico-m1` tem `base_model_id: claude-sonnet-4-6`.** Ou a doc está velha, ou o vínculo é por outro caminho — e a diferença decide se o corte atinge outro colaborador | ⬜ **verificar** |
+| 1 | **Republicar a `estruturar_deck_beta` pela workflow, com sha** | hoje o carimbo é `[origem: LOCAL — sem sha, não rastreável ao repo]`. Aceito enquanto beta; **não** aceito quando virar produto. **Destravado em 21/09:** a workflow recusava o alvo — `type: choice` com lista fechada, e `estruturar_deck_beta` não estava nela. O `case` já tinha ramo genérico, então faltava só a linha. **O publish local só foi possível porque a workflow não aceitava o alvo** | ⬜ rodar a workflow |
+| 2 | ~~Fechar a régua do deck~~ · **RESOLVIDO em 21/09** | as 5 do pipe rodadas com o mesmo pedido: mediana **41** slides, **277** chars/slide. Agente: **32** e **281**. Os dois decks lidos pelo Davi — **conteúdo equivalente**. Ver [D91](08_Decisoes_e_Pendencias.md) | ✅ |
+| 3 | ~~Confirmar o que o Chico usa como base~~ · **RESOLVIDO em 21/09** | **o Chico está aposentado e sai junto no corte** (Davi). A pergunta era se o corte atingiria outro colaborador; não atinge, porque o motor dele deixa de existir na mesma operação. O `CLAUDE.md` ainda afirma que ele usa o `chatnd` como base model — **está desatualizado** (a instância diz `claude-sonnet-4-6`) e a linha sai no corte, junto com o resto | ✅ |
 | 4 | **Decidir a dívida do analytics (D81)** | o pipe grava cada turno na tabela `eventos`; o agente não grava nada. Depois do corte, a comparação seria entre um lado medido e outro lembrado | ⬜ decisão |
 
 > O item 3 é o único que pode **adiar** o corte. Os outros três atrasam, não impedem.
@@ -126,6 +126,20 @@ entre um lado medido e outro lembrado.
 | **respostas sem acervo** | conteúdo genérico, sem citar documento | o agente não achou a base — pior que erro, porque parece resposta |
 | **volume de chamadas ao `gpt-5.1`** | custo | o estágio do deck é caro; no agente ele passa a ser chamado por decisão do modelo, não do roteador |
 
+### ⚠️ Confere-se o artefato, nunca a frase que o descreve
+
+**Todo sinal da tabela acima se lê no artefato ou no log** — contagem de slides no `.pptx`, tool
+calls no transcrito, chars no `nidum_orcamento`. **A prosa do agente entra como hipótese a
+conferir, nunca como evidência** ([D90](08_Decisoes_e_Pendencias.md)).
+
+Não é desconfiança genérica: em 21/09 o agente anunciou ter gerado *"todos os 30 slides,
+exatamente como especificado — sem alterações, cortes ou resumos"*, e **o arquivo tinha 32**. A
+frase era específica, segura, e tinha o formato de uma verificação. **Frase vaga levanta
+suspeita; frase precisa e errada, não.**
+
+Vale também para o relato de erro: *"não encontrei nada no acervo"* precisa ser conferido contra
+as buscas que ele de fato fez.
+
 ### Os três sinais de reverter, e eles não são graduais
 
 1. **Turno sem resposta em pergunta comum.** Se acontecer fora de "leia o documento inteiro", o
@@ -147,5 +161,5 @@ confirmação estatística — são qualitativos e visíveis na primeira ocorrê
 2. **A reversão não foi exercitada (§3).**
 3. **Nenhum número do agente existe do lado do analytics** (D81) — o primeiro dia será observado
    por log e por relato, não por série.
-4. **O vínculo do Chico com o `chatnd` não está confirmado** (pré-requisito 3): o `CLAUDE.md` diz
-   uma coisa e a instância diz outra.
+4. **O `CLAUDE.md` precisa perder a linha do Chico** — ele sai no corte, e a doc
+   ainda o descreve como dependente do `chatnd`.
