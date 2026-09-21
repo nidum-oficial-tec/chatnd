@@ -61,6 +61,29 @@ outra (o estágio fica no pipe e o agente o invoca de outro jeito).
 
 **A primeira execução da ferramenta é a prova.** Se falhar, falha barulhento e cedo.
 
+### A regra que este caso produziu
+
+> **Afirmação de conclusão sem artefato no repositório não conta como conclusão.**
+
+A prova do `bypass_filter` foi dada como **feita** — por uma sessão anterior, em conversa. Ao
+retomar, a verificação mostrou que nenhuma tool publicada chama `generate_chat_completion`.
+**A afirmação existia; o artefato, não.**
+
+É a **segunda vez no mesmo dia** que algo dito em conversa se perde entre sessões — a primeira
+foi este desenho, que teve de ser reconstruído por perguntas. Mas as duas não têm o mesmo peso:
+
+| perdido | o que acontece ao retomar |
+|---|---|
+| um **plano** | custa uma rodada de perguntas, e a falta é **óbvia** — não há o que ler |
+| uma **conclusão** | é **invisível**: quem retoma trata a premissa como resolvida e constrói em cima |
+
+Uma conclusão perdida não deixa buraco: deixa **chão falso**. Ninguém procura prova do que já
+foi dado como provado.
+
+**Na prática:** "já está provado" só vale acompanhado de onde está — teste que roda, log
+commitado, artefato no repositório. Sem isso, a resposta certa é *não sei*, e a ação certa é
+provar de novo. Custa menos que construir sobre a suposição.
+
 ## A régua
 
 Cinco execuções de cada lado. O resultado do pipe já tem baseline: **22 slides**.
