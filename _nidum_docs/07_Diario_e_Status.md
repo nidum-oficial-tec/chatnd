@@ -13,6 +13,41 @@
 
 ---
 
+## 2026-11-07 — "Reuniões mais recentes" vinham ao acaso: a busca agora ordena pela data do nome
+
+**Sintoma (produção, 07/11):** *"quais as datas das reuniões mais recentes?"* → o agente
+respondeu 01/10, 29/10 e 10/09 (nessa ordem). A base tinha atas de 03 a 06/11.
+
+**Causa (do upstream, mesma família da listagem de bases de 09/09):**
+`search_knowledge_files` (`backend/open_webui/tools/builtin.py`) ordenava por
+`File.updated_at`, que guarda a hora em que o arquivo **entrou na base**, e não a data da reunião.
+Depois do resync do dia 07/11, todos tinham praticamente o mesmo valor. E a busca cortava
+em 5 resultados sem avisar. O agente via cinco atas ao acaso e as chamava de "as
+mais recentes": a resposta era honesta e estava errada. A data verdadeira sempre esteve no nome
+(`..._04-11-2026_AUTO.md`) e nenhum código a lia.
+
+**Conserto (branch `conserto/busca-ordena-por-data-do-nome`):**
+- novo `backend/open_webui/utils/nidum_datas_arquivo.py`: lê `dd-mm-aaaa` (ou
+  `aaaa-mm-dd`) do nome e ordena por data DESC. Arquivo sem data vai para o fim, e o empate
+  se resolve por `updated_at`;
+- `search_knowledge_files` busca **todos** os candidatos com uma consulta leve (só
+  id/nome/updated_at, sem o conteúdo), ordena e **só depois** pagina. Devolve
+  `total/shown/truncated` e o campo `date` em cada arquivo. O padrão sobe de 5 para 20, e
+  a busca com texto vazio lista tudo (o docstring orienta o agente a fazer isso
+  para "mais recentes").
+- `list_knowledge` (a outra tool que lista arquivos de uma base) passa a usar a
+  **mesma** ordem antes de paginar. Antes ela vinha na ordem do banco, e as duas tools
+  discordavam sobre o que é "recente".
+- Muda o formato da saída: antes vinha uma lista, agora vem um objeto com `files`. O único consumidor é o modelo.
+- **O que NÃO muda:** a busca por conteúdo (`query_knowledge_files`, o RAG), o
+  `grep`, o `view_file`, a tela de Bases (usa o router, que chama os métodos do
+  upstream, intocados) e a esteira.
+
+**Como validar:** `py _nidum_tools/teste_busca_por_data.py` (offline). Em produção,
+depois do deploy, repetir a pergunta: devem vir 06/11, 05/11 e 04/11.
+
+---
+
 ## 2026-09-11 — FECHO DA SEMANA: de "o chat não responde bem a tarefas complexas" a 20 origens
 
 > **Este é o documento para quem chegar daqui a seis meses e perguntar por que o

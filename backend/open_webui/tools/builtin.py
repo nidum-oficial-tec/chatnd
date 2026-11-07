@@ -1650,10 +1650,49 @@ async def search_knowledge_bases(
         return json.dumps({'error': str(e)})
 
 
+async def _nidum_arquivos_das_bases(bases: dict, query: str) -> list[dict]:
+    """Arquivos das bases dadas (id -> nome), SEM carregar o conteudo.
+
+    NIDUM (07/11/2026). As bases ja chegam com o acesso CONFERIDO por quem chama.
+    Seleciona so id/nome/updated_at: para ordenar pela data do nome e preciso
+    ver TODOS os candidatos, e trazer File.data (o texto inteiro) de centenas de
+    atas so para ler o nome seria megabytes por chamada.
+    """
+    if not bases:
+        return []
+
+    from sqlalchemy import select
+
+    from open_webui.internal.db import get_async_db_context
+    from open_webui.models.files import File
+    from open_webui.models.knowledge import KnowledgeFile
+
+    async with get_async_db_context() as db:
+        stmt = (
+            select(File.id, File.filename, File.updated_at, KnowledgeFile.knowledge_id)
+            .join(KnowledgeFile, File.id == KnowledgeFile.file_id)
+            .filter(KnowledgeFile.knowledge_id.in_(list(bases.keys())))
+        )
+        if query:
+            stmt = stmt.filter(File.filename.ilike(f'%{query}%'))
+        rows = (await db.execute(stmt)).all()
+
+    return [
+        {
+            'id': file_id,
+            'filename': filename,
+            'knowledge_id': kb_id,
+            'knowledge_name': bases.get(kb_id, ''),
+            'updated_at': updated_at,
+        }
+        for file_id, filename, updated_at, kb_id in rows
+    ]
+
+
 async def search_knowledge_files(
-    query: str,
+    query: str = '',
     knowledge_id: Optional[str] = None,
-    count: int = 5,
+    count: int = 20,
     skip: int = 0,
     __request__: Request = None,
     __user__: dict = None,
@@ -1663,11 +1702,22 @@ async def search_knowledge_files(
     Search files by filename across knowledge bases the user has access to.
     When the model has attached knowledge, searches only within attached KBs and files.
 
-    :param query: The search query to find matching files by filename
+    Results are sorted by the DATE IN THE FILENAME (dd-mm-yyyy), newest first;
+    files without a date come last. Each dated file has 'date' (yyyy-mm-dd) -
+    that is the meeting/document date. 'updated_at' is only when the file was
+    loaded into the base and does NOT tell which document is recent.
+
+    To find the MOST RECENT files (e.g. latest meetings), call with an empty
+    query (or a folder name such as 'Atas') and read the first results - do not
+    guess dates from a handful of keyword matches.
+
+    :param query: Text to match in the filename (case-insensitive). Empty = all files.
     :param knowledge_id: Optional KB id to limit search to a specific knowledge base
-    :param count: Maximum number of results to return (default: 5)
+    :param count: Maximum number of results to return (default: 20)
     :param skip: Number of results to skip for pagination (default: 0)
-    :return: JSON with matching files containing id, filename, and updated_at
+    :return: JSON object with 'total', 'shown', 'truncated' and 'files' (each with
+             id, filename, date, knowledge_id, knowledge_name, updated_at),
+             newest date first.
     """
     if __request__ is None:
         return json.dumps({'error': 'Request context not available'})
@@ -1679,93 +1729,27 @@ async def search_knowledge_files(
         from open_webui.models.access_grants import AccessGrants
         from open_webui.models.files import Files
         from open_webui.models.knowledge import Knowledges
+        from open_webui.utils.nidum_datas_arquivo import ordenar_por_data_do_nome
 
         user_id = __user__.get('id')
         user_role = __user__.get('role', 'user')
         user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
+        query = query or ''
+        # O modelo as vezes manda numero como texto ("20"). O upstream passava
+        # direto ao SQL, que tolerava; o fatiamento em Python nao tolera.
+        try:
+            skip = max(int(skip or 0), 0)
+        except (ValueError, TypeError):
+            skip = 0
+        try:
+            count = max(int(count or 20), 1)
+        except (ValueError, TypeError):
+            count = 20
+        if isinstance(knowledge_id, str) and knowledge_id.lower() in ('none', 'null', ''):
+            knowledge_id = None
 
-        # When model has attached knowledge, scope to attached KBs/files only
-        if __model_knowledge__:
-            attached_kb_ids = set()
-            attached_file_ids = set()
-
-            for item in __model_knowledge__:
-                item_type = item.get('type')
-                item_id = item.get('id')
-                if item_type == 'collection':
-                    attached_kb_ids.add(item_id)
-                elif item_type == 'file':
-                    attached_file_ids.add(item_id)
-
-            # If knowledge_id specified, verify it's in the attached set
-            if knowledge_id:
-                if knowledge_id not in attached_kb_ids:
-                    return json.dumps({'error': f'Knowledge base {knowledge_id} is not attached to this model'})
-                attached_kb_ids = {knowledge_id}
-
-            all_files = []
-
-            # Search within attached KBs
-            for kb_id in attached_kb_ids:
-                knowledge = await Knowledges.get_knowledge_by_id(kb_id)
-                if not knowledge:
-                    continue
-
-                if not (
-                    user_role == 'admin'
-                    or knowledge.user_id == user_id
-                    or await AccessGrants.has_access(
-                        user_id=user_id,
-                        resource_type='knowledge',
-                        resource_id=knowledge.id,
-                        permission='read',
-                        user_group_ids=set(user_group_ids),
-                    )
-                ):
-                    continue
-
-                result = await Knowledges.search_files_by_id(
-                    knowledge_id=kb_id,
-                    user_id=user_id,
-                    filter={'query': query},
-                    skip=0,
-                    limit=count + skip,
-                )
-
-                for file in result.items:
-                    all_files.append(
-                        {
-                            'id': file.id,
-                            'filename': file.filename,
-                            'knowledge_id': knowledge.id,
-                            'knowledge_name': knowledge.name,
-                            'updated_at': file.updated_at,
-                        }
-                    )
-
-            # Search within directly attached files (filename match)
-            if not knowledge_id and attached_file_ids:
-                query_lower = query.lower() if query else ''
-                for file_id in attached_file_ids:
-                    file = await Files.get_file_by_id(file_id)
-                    if file and (not query_lower or query_lower in file.filename.lower()):
-                        all_files.append(
-                            {
-                                'id': file.id,
-                                'filename': file.filename,
-                                'updated_at': file.updated_at,
-                            }
-                        )
-
-            # Apply pagination across combined results
-            all_files = all_files[skip : skip + count]
-            return json.dumps(all_files, ensure_ascii=False)
-
-        # No attached knowledge - search all accessible KBs
-        if knowledge_id:
-            # search_files_by_id does not enforce knowledge_id ownership; mirror the attached-KB check above.
-            knowledge = await Knowledges.get_knowledge_by_id(knowledge_id)
-            if not knowledge or not (
+        async def pode_ler(knowledge) -> bool:
+            return bool(
                 user_role == 'admin'
                 or knowledge.user_id == user_id
                 or await AccessGrants.has_access(
@@ -1775,40 +1759,94 @@ async def search_knowledge_files(
                     permission='read',
                     user_group_ids=set(user_group_ids),
                 )
-            ):
+            )
+
+        # NIDUM (07/11/2026) - ORDEM PELA DATA DO NOME, e com o total DECLARADO.
+        #
+        # O DEFEITO, medido em producao: "quais as reunioes mais recentes?" ->
+        # o agente respondeu 01/10, 29/10 e 10/09, com a base cheia de atas de
+        # 03 a 06/11. O upstream ordenava por File.updated_at (hora do UPLOAD,
+        # nao da reuniao - depois de um resync e igual para todos) e cortava em
+        # 5. O agente via cinco atas ao acaso e as chamava de "as mais
+        # recentes". Mesma familia do defeito da listagem de bases (09/09):
+        # ordem errada + corte calado = resposta honesta e errada.
+        #
+        # Por isso: busca TODOS os candidatos (so id/nome, sem conteudo),
+        # ordena pela data do nome, e so DEPOIS pagina. Paginar antes de
+        # ordenar seria ordenar uma amostra.
+        all_files: list[dict] = []
+
+        if __model_knowledge__:
+            attached_kb_ids = []
+            attached_file_ids = []
+            for item in __model_knowledge__:
+                if item.get('type') == 'collection':
+                    attached_kb_ids.append(item.get('id'))
+                elif item.get('type') == 'file':
+                    attached_file_ids.append(item.get('id'))
+
+            if knowledge_id:
+                if knowledge_id not in attached_kb_ids:
+                    return json.dumps({'error': f'Knowledge base {knowledge_id} is not attached to this model'})
+                attached_kb_ids = [knowledge_id]
+
+            bases = {}
+            for kb_id in dict.fromkeys(attached_kb_ids):
+                knowledge = await Knowledges.get_knowledge_by_id(kb_id)
+                if knowledge and await pode_ler(knowledge):
+                    bases[knowledge.id] = knowledge.name
+
+            all_files.extend(await _nidum_arquivos_das_bases(bases, query))
+
+            # Arquivos anexados direto ao modelo (fora de base)
+            if not knowledge_id and attached_file_ids:
+                query_lower = query.lower()
+                for file_id in dict.fromkeys(attached_file_ids):
+                    file = await Files.get_file_by_id(file_id)
+                    if file and (not query_lower or query_lower in file.filename.lower()):
+                        all_files.append(
+                            {
+                                'id': file.id,
+                                'filename': file.filename,
+                                'updated_at': file.updated_at,
+                            }
+                        )
+        elif knowledge_id:
+            # A consulta leve nao confere acesso; a conferencia e aqui.
+            knowledge = await Knowledges.get_knowledge_by_id(knowledge_id)
+            if not knowledge or not await pode_ler(knowledge):
                 return json.dumps({'error': f'Access denied to knowledge base {knowledge_id}'})
-
-            result = await Knowledges.search_files_by_id(
-                knowledge_id=knowledge_id,
-                user_id=user_id,
-                filter={'query': query},
-                skip=skip,
-                limit=count,
-            )
+            all_files.extend(await _nidum_arquivos_das_bases({knowledge.id: knowledge.name}, query))
         else:
-            result = await Knowledges.search_knowledge_files(
-                filter={
-                    'query': query,
-                    'user_id': user_id,
-                    'group_ids': user_group_ids,
-                },
-                skip=skip,
-                limit=count,
+            # Sem base anexada: todas as que o usuario le (mesmo filtro de
+            # acesso da listagem de bases). limit=0 = sem corte.
+            result = await Knowledges.search_knowledge_bases(
+                user_id,
+                filter={'query': '', 'user_id': user_id, 'group_ids': user_group_ids},
+                skip=0,
+                limit=0,
             )
+            bases = {kb.id: kb.name for kb in result.items}
+            all_files.extend(await _nidum_arquivos_das_bases(bases, query))
 
-        files = []
-        for file in result.items:
-            file_info = {
-                'id': file.id,
-                'filename': file.filename,
-                'updated_at': file.updated_at,
-            }
-            if hasattr(file, 'collection') and file.collection:
-                file_info['knowledge_id'] = file.collection.get('id', '')
-                file_info['knowledge_name'] = file.collection.get('name', '')
-            files.append(file_info)
+        ordenados = ordenar_por_data_do_nome(all_files)
+        total = len(ordenados)
+        pagina = ordenados[skip : skip + count]
+        truncated = (skip + len(pagina)) < total
 
-        return json.dumps(files, ensure_ascii=False)
+        payload = {
+            'total': total,
+            'shown': len(pagina),
+            'truncated': truncated,
+            'sorted_by': 'date in filename, newest first',
+            'files': pagina,
+        }
+        if truncated:
+            payload['note'] = (
+                '%d of %d matching files shown (newest first). Use skip for older '
+                'ones, or a more specific query.' % (len(pagina), total)
+            )
+        return json.dumps(payload, ensure_ascii=False)
     except Exception as e:
         log.exception(f'search_knowledge_files error: {e}')
         return json.dumps({'error': str(e)})
@@ -2255,7 +2293,8 @@ async def list_knowledge(
     Use this first to discover what knowledge is available before querying or reading files.
     Without knowledge_id: returns KB summaries (name, description, file_count)
     plus standalone files and notes — no file listing inside KBs.
-    With knowledge_id: includes paginated file listing for that specific KB.
+    With knowledge_id: includes paginated file listing for that specific KB,
+    sorted by the date in the filename (newest first; 'date' = yyyy-mm-dd).
     Use skip/count to page through large KBs.
 
     :param knowledge_id: Optional KB ID to get file listing for
@@ -2332,8 +2371,20 @@ async def list_knowledge(
                     # Include file listing only when this KB is targeted
                     if knowledge_id and knowledge_id == knowledge.id:
                         if kb_files:
-                            paged_files = kb_files[skip : skip + count]
-                            kb_entry['files'] = [{'id': f.id, 'filename': f.filename} for f in paged_files]
+                            # NIDUM (07/11/2026): mesma ordem da search_knowledge_files
+                            # (data do nome, mais nova primeiro). Sem isto a pagina 1
+                            # vinha na ordem do banco, e as duas tools discordavam
+                            # sobre o que e "recente".
+                            from open_webui.utils.nidum_datas_arquivo import ordenar_por_data_do_nome
+
+                            ordenados = ordenar_por_data_do_nome(
+                                [{'id': f.id, 'filename': f.filename, 'updated_at': f.updated_at} for f in kb_files]
+                            )
+                            paged_files = ordenados[skip : skip + count]
+                            kb_entry['files'] = [
+                                {'id': f['id'], 'filename': f['filename'], **({'date': f['date']} if 'date' in f else {})}
+                                for f in paged_files
+                            ]
                             kb_entry['files_skip'] = skip
                             kb_entry['files_count'] = len(paged_files)
                             kb_entry['files_total'] = file_count
