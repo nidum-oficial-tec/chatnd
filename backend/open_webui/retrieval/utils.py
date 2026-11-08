@@ -638,14 +638,16 @@ async def _nidum_hibrida_rerank_global(
     from open_webui.utils.nidum_rerank_global import fatiar, intercalar, nota
     from open_webui.utils.nidum_rerank_global import lotes as _nidum_lotes
 
-    n_lotes = _nidum_lotes()
+    # NIDUM (08/11/2026, etapa A): com mais de uma consulta (a do agente + a
+    # pergunta do usuario, ver utils/nidum_pergunta_original.py), as consultas
+    # rodam EM PARALELO e dividem os lotes - o total de threads do reranker
+    # continua ~24 (os vCPU), e o tempo nao dobra.
+    n_lotes = max(1, _nidum_lotes() // max(1, len(queries)))
     t0 = time.time()
-    t_busca = t_rerank = 0.0
     nomes = [n for n in collection_names if collection_results.get(n) is not None]
-    results = []
-    n_cand = 0
-    for query in queries:
+    medidas = {'busca': 0.0, 'reranker': 0.0, 'candidatos': 0}
 
+    async def _uma_consulta(query):
         async def candidatos(name):
             try:
                 docs = await query_doc_with_hybrid_search(
@@ -668,11 +670,11 @@ async def _nidum_hibrida_rerank_global(
 
         t_b = time.time()
         listas = await asyncio.gather(*(candidatos(n) for n in nomes))
-        t_busca += time.time() - t_b
+        medidas['busca'] = max(medidas['busca'], time.time() - t_b)
         pool = intercalar(listas, prof, CHUNK_HASH_KEY)
-        n_cand += len(pool)
+        medidas['candidatos'] += len(pool)
         if not pool:
-            continue
+            return None
         # Em LOTES PARALELOS, nao numa chamada so: uma chamada usa so as 4 threads
         # do OMP_NUM_THREADS e ficou tao lenta quanto as 13 do upstream (medido
         # 08/11, 14:17 UTC). Ver nidum_rerank_global.lotes().
@@ -687,19 +689,20 @@ async def _nidum_hibrida_rerank_global(
 
         t_r = time.time()
         partes = await asyncio.gather(*(_reranquear(l) for l in fatiar(pool, n_lotes)))
-        t_rerank += time.time() - t_r
+        medidas['reranker'] = max(medidas['reranker'], time.time() - t_r)
         docs = sorted((d for p in partes for d in p), key=nota, reverse=True)[:k_reranker]
-        results.append(
-            {
-                'distances': [[d.metadata.get('score') for d in docs]],
-                'documents': [[d.page_content for d in docs]],
-                'metadatas': [[d.metadata for d in docs]],
-            }
-        )
+        return {
+            'distances': [[d.metadata.get('score') for d in docs]],
+            'documents': [[d.page_content for d in docs]],
+            'metadatas': [[d.metadata for d in docs]],
+        }
+
+    results = [x for x in await asyncio.gather(*(_uma_consulta(q) for q in queries)) if x]
     log.info(
         'nidum_rerank_global: %d bases, %d consulta(s), %d candidatos (profundidade %d, %d lotes), '
         '%.1f s (busca %.1f s, reranker %.1f s)'
-        % (len(nomes), len(queries), n_cand, prof, n_lotes, time.time() - t0, t_busca, t_rerank)
+        % (len(nomes), len(queries), medidas['candidatos'], prof, n_lotes, time.time() - t0,
+           medidas['busca'], medidas['reranker'])
     )
     return merge_and_sort_query_results(results, k=k)
 
