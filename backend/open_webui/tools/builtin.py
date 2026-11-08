@@ -1673,8 +1673,11 @@ async def _nidum_arquivos_das_bases(bases: dict, query: str) -> list[dict]:
             .join(KnowledgeFile, File.id == KnowledgeFile.file_id)
             .filter(KnowledgeFile.knowledge_id.in_(list(bases.keys())))
         )
-        if query:
-            stmt = stmt.filter(File.filename.ilike(f'%{query}%'))
+        # NIDUM (08/11/2026): o filtro pela consulta NAO e mais no SQL. O ILIKE
+        # exigia a consulta inteira, igual, dentro do nome - "Comite de
+        # Projetos 03-11" nao achava "..._CP_03.11.26". Quem chama filtra com
+        # utils/nidum_busca_nome.py (palavras, datas, siglas). Trazer todos os
+        # nomes ja era o caminho da consulta vazia: so id/nome, sem conteudo.
         rows = (await db.execute(stmt)).all()
 
     return [
@@ -1712,7 +1715,15 @@ async def search_knowledge_files(
     query (or a folder name such as 'Atas') and read the first results - do not
     guess dates from a handful of keyword matches.
 
-    :param query: Text to match in the filename (case-insensitive). Empty = all files.
+    The query is split into words, dates and acronyms, each matched on its own,
+    in any order, ignoring accents and case: "Comite de Projetos 03/11" finds
+    "Reuniao_Acompanhamento _CP_03.11.26" (CP = Comite de Projetos; 03/11 =
+    03.11.26). Dates may be written 03/11, 03-11-2026, 2026-11-03 or
+    "novembro de 2026". If no name matches every word, the closest names come
+    back with match='parcial' - a name search with no result does NOT prove a
+    document is absent.
+
+    :param query: Words, dates or acronyms to find in the filename. Empty = all files.
     :param knowledge_id: Optional KB id to limit search to a specific knowledge base
     :param count: Maximum number of results to return (default: 20)
     :param skip: Number of results to skip for pagination (default: 0)
@@ -1800,12 +1811,12 @@ async def search_knowledge_files(
 
             all_files.extend(await _nidum_arquivos_das_bases(bases, query))
 
-            # Arquivos anexados direto ao modelo (fora de base)
+            # Arquivos anexados direto ao modelo (fora de base). O filtro pela
+            # consulta e o mesmo das bases, aplicado mais abaixo.
             if not knowledge_id and attached_file_ids:
-                query_lower = query.lower()
                 for file_id in dict.fromkeys(attached_file_ids):
                     file = await Files.get_file_by_id(file_id)
-                    if file and (not query_lower or query_lower in file.filename.lower()):
+                    if file:
                         all_files.append(
                             {
                                 'id': file.id,
@@ -1831,7 +1842,19 @@ async def search_knowledge_files(
             bases = {kb.id: kb.name for kb in result.items}
             all_files.extend(await _nidum_arquivos_das_bases(bases, query))
 
+        # NIDUM (08/11/2026) - casamento por palavras, datas e siglas. Ver
+        # utils/nidum_busca_nome.py. Em modo 'parcial' o agente recebe os mais
+        # proximos E o aviso de que nenhum casou tudo - para nao concluir
+        # "nao existe" por causa de uma palavra (erro de 07/11, deck do CP).
+        from open_webui.utils.nidum_busca_nome import filtrar
+
+        candidatos = all_files
+        all_files, modo = filtrar(candidatos, query)
+
         ordenados = ordenar_por_data_do_nome(all_files)
+        # Quem casa pelo NOME do arquivo vem antes de quem so casa pela pasta;
+        # dentro de cada grupo, a data do nome (o sort do Python e estavel).
+        ordenados.sort(key=lambda f: 1 if f.get('match_in') == 'folder' else 0)
         total = len(ordenados)
         pagina = ordenados[skip : skip + count]
         truncated = (skip + len(pagina)) < total
@@ -1841,13 +1864,28 @@ async def search_knowledge_files(
             'shown': len(pagina),
             'truncated': truncated,
             'sorted_by': 'date in filename, newest first',
+            'match': modo,
             'files': pagina,
         }
+        notas = []
+        if modo == 'parcial':
+            notas.append(
+                'No filename matched ALL words of the query; these are the closest '
+                '(match_score = requirements met). The document may exist under '
+                'another name: try fewer words, or query_knowledge_files.'
+            )
+        elif modo == 'vazio':
+            notas.append(
+                'No filename matched. This searches NAMES only - it does not prove '
+                'the document is absent. Try fewer words or query_knowledge_files.'
+            )
         if truncated:
-            payload['note'] = (
+            notas.append(
                 '%d of %d matching files shown (newest first). Use skip for older '
                 'ones, or a more specific query.' % (len(pagina), total)
             )
+        if notas:
+            payload['note'] = ' '.join(notas)
 
         # NIDUM (07/11/2026) - RASTRO (R3, peca 3). Ver utils/nidum_rastro.py.
         from open_webui.utils.nidum_rastro import registrar
