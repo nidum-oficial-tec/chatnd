@@ -52,6 +52,13 @@ e o dump prova que nao vaza - fica como esta.
 
 ## 3. PASSO 2 - teto de threads numericas = 8 (so se precisar, medindo)
 
+> **ESTADO (07/11/2026): APLICADO, com 4 e nao 8.** Precisou: a busca em 13 bases
+> derrubava o servidor (`libgomp: Thread creation failed`) a cada 1-2 buscas seguidas.
+> Valor 4 porque o reranker roda em paralelo uma vez por base (13 x 4 = 52 threads de
+> calculo para 24 vCPU; com 8 seriam ~104). Depois: 24 buscas em serie, 0 quedas,
+> mediana 69,6 s por busca (era 84-92 s). Whisper NAO foi remedido. Ver D94 em
+> `_nidum_docs/08_Decisoes_e_Pendencias.md`.
+
 Variaveis do Railway (nao entram no Dockerfile de proposito - so depois de medido):
 
 ```

@@ -29,10 +29,38 @@ de todos os datados; entre eles vale o updated_at, como antes.
 import re
 from datetime import date
 
-# dd-mm-aaaa (convencao da esteira) e aaaa-mm-dd. Separador -, _ ou .
+# dd-mm-aaaa (convencao da esteira) e aaaa-mm-dd. Separador -, _, . ou espaco
+# (o espaco so com ano de 4 digitos: "Escaneamento_3D_01 10 2026").
 # Os limites (?<!\d) / (?!\d) impedem casar pedaco de um numero maior.
-_DMA = re.compile(r'(?<!\d)(\d{1,2})[-_.](\d{1,2})[-_.](\d{4})(?!\d)')
+_DMA = re.compile(r'(?<!\d)(\d{1,2})[-_. ](\d{1,2})[-_. ](\d{4})(?!\d)')
 _AMD = re.compile(r'(?<!\d)(\d{4})[-_.](\d{1,2})[-_.](\d{1,2})(?!\d)')
+
+# NIDUM (08/11/2026) - ANO DE DOIS DIGITOS e data compacta.
+#
+# O DEFEITO, medido em producao: o deck "Reuniao_Acompanhamento _CP_03.11.26"
+# (Comite de Projetos de 03/11) ficava SEM DATA - so se lia ano de 4 digitos -
+# e ia para o FIM da lista. O agente viu primeiro a ata de 24/08 e respondeu
+# que ela era "a ultima reuniao do Comite". Dos 1.407 nomes da base em 08/11,
+# 888 nao tinham data lida; os formatos que faltavam, por frequencia:
+#   aa_mm_dd   45  (cronogramas: BRA_CronogramaMVPISerraNegra_26_09_15_v1)
+#   dd.mm.aa   21  (Governanca_GP_04.08.26_V1, ..._CP_03.11.26)
+#   dd-mm-aa    1  (Apresentacao_Interna_NIDUM_MKT 25-06-26)
+#   aaaammdd    2  (NID-LAUDO-20260811-...)
+#
+# A AMBIGUIDADE e real ("24.10.25" pode ser 24/10/2025 ou 25/10/2024), e se
+# resolve pela CONVENCAO DA CASA, medida nos nomes: com "_" o ano vem primeiro
+# (aa_mm_dd), com "." ou "-" vem por ultimo (dd.mm.aa). Se a leitura preferida
+# nao for uma data valida, tenta a outra.
+#
+# A TRAVA contra numero que nao e data (versao "v1.5.0", secao "3.1.4", codigo
+# "30_09_02"): ano de dois digitos so vale entre 2025 e 2029 (a base e de 2026).
+# Fora disso, nao e data - e nome sem data vai para o fim, como antes. Errar
+# para "sem data" e o lado seguro; errar para uma data falsa poe o arquivo no
+# lugar errado. Medido: com 2020 como piso, "BRA_CronogramaMVPVirginia_30_09_23_v2"
+# virava 30/09/2023 - o unico erro em 82 nomes. Com 2025, fica sem data.
+_DOIS = re.compile(r'(?<![\dvV.])(\d{1,2})([-_.])(\d{1,2})\2(\d{2})(?![\d])')
+_COMPACTA = re.compile(r'(?<!\d)(202\d)(\d{2})(\d{2})(?!\d)')
+_ANO_MIN, _ANO_MAX = 2025, 2029
 
 
 def _valida(ano, mes, dia):
@@ -40,6 +68,19 @@ def _valida(ano, mes, dia):
         return date(int(ano), int(mes), int(dia))
     except (ValueError, TypeError):
         return None
+
+
+def _plausivel(d):
+    return d if d and _ANO_MIN <= d.year <= _ANO_MAX else None
+
+
+def _dois_digitos(a, sep, b, c):
+    """a<sep>b<sep>c com c de dois digitos. Devolve date ou None."""
+    dma = _plausivel(_valida(2000 + int(c), b, a))   # dd.mm.aa
+    amd = _plausivel(_valida(2000 + int(a), b, c))   # aa_mm_dd
+    if sep == '_':
+        return amd or dma
+    return dma or amd
 
 
 def data_do_nome(nome):
@@ -58,6 +99,14 @@ def data_do_nome(nome):
             achados.append((m.start(), d))
     for m in _AMD.finditer(nome):
         d = _valida(m.group(1), m.group(2), m.group(3))
+        if d:
+            achados.append((m.start(), d))
+    for m in _DOIS.finditer(nome):
+        d = _dois_digitos(m.group(1), m.group(2), m.group(3), m.group(4))
+        if d:
+            achados.append((m.start(), d))
+    for m in _COMPACTA.finditer(nome):
+        d = _plausivel(_valida(m.group(1), m.group(2), m.group(3)))
         if d:
             achados.append((m.start(), d))
     if not achados:
