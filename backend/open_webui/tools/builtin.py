@@ -1851,10 +1851,19 @@ async def search_knowledge_files(
         candidatos = all_files
         all_files, modo = filtrar(candidatos, query)
 
+        # A ORDEM E SO A DATA DO NOME - e o contrato desta ferramenta, escrito no
+        # docstring ("para achar as reunioes mais recentes, busque 'Atas'").
+        #
+        # NIDUM (08/11/2026) - REVERTIDO: o PR #124 punha quem casa pelo NOME do
+        # arquivo antes de quem so casa pela PASTA (motivo: "portfolio" trazia
+        # cronogramas de uma pasta "Portfolio" no topo). Medido em producao no
+        # mesmo dia: "Atas" passou a trazer primeiro os arquivos com "Ata" no
+        # nome (10/09, 27/08...) e as atas de 06/11, que so tem "Atas" na
+        # pasta, foram para baixo - o agente respondeu que a reuniao mais
+        # recente era de 10/09. Ajuste feito para um caso quebrou o caso que o
+        # proprio docstring ensina. 'match_in' continua em cada arquivo, como
+        # informacao para o modelo; a ordem nao depende dele.
         ordenados = ordenar_por_data_do_nome(all_files)
-        # Quem casa pelo NOME do arquivo vem antes de quem so casa pela pasta;
-        # dentro de cada grupo, a data do nome (o sort do Python e estavel).
-        ordenados.sort(key=lambda f: 1 if f.get('match_in') == 'folder' else 0)
         total = len(ordenados)
         pagina = ordenados[skip : skip + count]
         truncated = (skip + len(pagina)) < total

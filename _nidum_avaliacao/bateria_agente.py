@@ -3,7 +3,15 @@
 Mesmo jeito de chamar da bateria_orcamento (D88): stream, chat_id real, id,
 function_calling native. Sem pasta e sem '#': o caminho de um usuario comum.
 Grava, por pergunta: resposta, consultas que o agente mandou, n de chamadas,
-latencia. So leitura alem dos chats criados (titulo 'medicao regua <id>')."""
+latencia. So leitura alem dos chats criados (titulo 'medicao regua <id>').
+
+USO:
+  py _nidum_avaliacao/bateria_agente.py <saida.json>
+      as 12 da bateria, do gabarito_busca.json
+  py _nidum_avaliacao/bateria_agente.py <saida.json> <perguntas.json>
+      outro conjunto, no formato {"itens": [{"id", "pergunta", ...}]} - por
+      exemplo perguntas CEGAS, escritas por quem nao viu os consertos. Itens
+      com "usavel": false sao pulados."""
 import html, io, json, os, re, sys, time, urllib.request
 
 RAIZ = r"C:\Users\daviv\Dev\1-nidum\chatnd\interface-chatnd"
@@ -11,6 +19,7 @@ URL = "https://chatnd.nidumbrasil.com.br"
 MODELO = "chatnd"
 IDS = "L01,L02,L04,R01,R03,R06,T01,T02,F02,F09,E03,A03".split(",")
 SAIDA = sys.argv[1]
+PERGUNTAS = sys.argv[2] if len(sys.argv) > 2 else None
 
 
 def token():
@@ -85,8 +94,13 @@ def um(item):
             "chamadas": chamadas, "resposta": final}
 
 
-gab = json.load(io.open(os.path.join(RAIZ, "_nidum_avaliacao", "gabarito_busca.json"), encoding="utf-8"))
-itens = [i for i in gab["itens"] if i["id"] in IDS]
+if PERGUNTAS:
+    itens = [i for i in json.load(io.open(PERGUNTAS, encoding="utf-8"))["itens"] if i.get("usavel", True)]
+    for i in itens:
+        i.setdefault("tipo", "?")
+else:
+    gab = json.load(io.open(os.path.join(RAIZ, "_nidum_avaliacao", "gabarito_busca.json"), encoding="utf-8"))
+    itens = [i for i in gab["itens"] if i["id"] in IDS]
 out = []
 for n, it in enumerate(itens, 1):
     try:

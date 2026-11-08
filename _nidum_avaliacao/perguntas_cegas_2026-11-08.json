@@ -1,0 +1,139 @@
+{
+  "itens": [
+    {
+      "id": "C01",
+      "doc": "doc01.txt",
+      "usavel": true,
+      "tipo": "fato",
+      "pergunta": "Na reunião de 01/10 com o investidor João Chacra, qual era o perfil de imóvel e a faixa de preço que ele buscava no Rio?",
+      "resposta_esperada": "Apartamento acima de 70 m² (sem necessidade de 2 quartos), de preferência em Ipanema/prédio antigo, com faixa de até R$ 2,5 milhões incluindo a obra.",
+      "evidencia": "Preferência por apartamento acima de 70 m², sem necessidade de 2 quartos, faixa de preço de até R$ 2,5 milhões incluindo obra."
+    },
+    {
+      "id": "C02",
+      "doc": "doc02.txt",
+      "usavel": true,
+      "tipo": "decisao",
+      "pergunta": "O que foi decidido na reunião de 05/11 sobre a estratégia da Nidum Connect e o atendimento sobre os nomes dos produtos no site?",
+      "resposta_esperada": "Decidiu-se substituir \"Nidum Mundo\" por \"Nidum Connect\" (ou \"Nidum Conecta\") no site e manter \"Casas Vivas\" como guarda-chuva de produtos por ora; também adiar a apresentação de preços ao casal João e Lola.",
+      "evidencia": "Substituir \"Nidum Mundo\" por \"Nidum Connect\" (ou \"Nidum Conecta\") no site, por ser uma alteração simples de implementar."
+    },
+    {
+      "id": "C03",
+      "doc": "doc03.txt",
+      "usavel": true,
+      "tipo": "conteudo",
+      "pergunta": "Pela lei de Londrina da Área de Expansão Urbana de Desenvolvimento Sustentável (AEU-DS), usada no Comunidades Vivas, quanto da vedação no alinhamento precisa ter permeabilidade visual?",
+      "resposta_esperada": "Pelo menos 2/3 (dois terços) da extensão da vedação junto ao alinhamento deve garantir permeabilidade visual; muretas são admitidas até 80 cm.",
+      "evidencia": "garantam a permeabilidade visual em pelo menos 2/3 (dois terços) de sua extensão"
+    },
+    {
+      "id": "C04",
+      "doc": "doc04.txt",
+      "usavel": true,
+      "tipo": "fato",
+      "pergunta": "No laudo de vistoria do apartamento dos Jardins (RTF-003), qual foi a nota de conservação do jardim frontal da portaria e o que se recomendou fazer com ele?",
+      "resposta_esperada": "Nota 3,8/5; a recomendação é manter no imóvel e recompor por partes (replantar falhas da cerca viva, limpar, avaliar transplante da iúca), sem reforma geral.",
+      "evidencia": "Nota: 3,8/5. Vegetação viva e com bom volume, poda recente e cobertura razoável do solo."
+    },
+    {
+      "id": "C05",
+      "doc": "doc05.txt",
+      "usavel": true,
+      "tipo": "conteudo",
+      "pergunta": "O que diz o laudo do piso da rampa da garagem do retrofit nos Jardins, em São Paulo? Precisa trocar?",
+      "resposta_esperada": "É pedra natural em blocos (aparência de granito serrado), nota 4/5, em bom estado; recomenda-se manter, com lavagem com hidrojato, revisão de juntas e verificação da drenagem, sem substituição.",
+      "evidencia": "A intervenção indicada é de limpeza e correções pontuais, não de substituição."
+    },
+    {
+      "id": "C06",
+      "doc": "doc06.txt",
+      "usavel": true,
+      "tipo": "fato",
+      "pergunta": "Na apresentação \"Uma nova forma para o valor\", quanto a Nidum gasta para chegar ao gêmeo digital perfeito no exemplo do apartamento?",
+      "resposta_esperada": "R$ 50 mil (\"A Nidum gasta 50 mil para chegar ao gêmeo perfeito\"), no modelo de um apartamento de R$ 1.000.000.",
+      "evidencia": "A Nidum gasta 50 mil para chegar ao gêmeo perfeito."
+    },
+    {
+      "id": "C07",
+      "doc": "doc07.txt",
+      "usavel": true,
+      "tipo": "conteudo",
+      "pergunta": "Como eu faço para ter acesso ao ChatND? Precisa de aprovação de alguém?",
+      "resposta_esperada": "Acessar o endereço interno no navegador e se cadastrar com o e-mail nidumbrasil; o cadastro precisa ser aprovado pela equipe de tecnologia (dúvidas: equipe da Plataforma Tecnológica pelo Teams).",
+      "evidencia": "O cadastro precisa ser aprovado pela equipe de tecnologia. Cadastre-se pelo seu e-mail nidumbrasil."
+    },
+    {
+      "id": "C08",
+      "doc": "doc08.txt",
+      "usavel": true,
+      "tipo": "lista",
+      "pergunta": "Quais são as cores da nova paleta da Nidum apresentadas no posicionamento de marca 2026 e o que cada uma representa?",
+      "resposta_esperada": "Verde Escuro (mata, terra, brasilidade estrutural), Creme (calor orgânico, o ninho em cor) e Azul Sólido (método, rigor e inteligência tecnológica).",
+      "evidencia": "Verde Escuro: Mata, terra, brasilidade estrutural. Creme: Calor orgânico, o ninho em cor. Azul Sólido: Método, rigor"
+    },
+    {
+      "id": "C09",
+      "doc": "doc09.txt",
+      "usavel": true,
+      "tipo": "conteudo",
+      "pergunta": "No laudo técnico do piso da cozinha do dossiê de produtos, qual é o material do piso e a recomendação final?",
+      "resposta_esperada": "Porcelanato esmaltado polido cinza grafite, cerca de 60 × 60 cm, em bom estado (4,0/5); recomenda-se reaproveitamento integral com limpeza técnica e revitalização superficial.",
+      "evidencia": "Recomenda-se o reaproveitamento integral do piso, com intervenções apenas de limpeza técnica e revitalização superficial."
+    },
+    {
+      "id": "C10",
+      "doc": "doc10.txt",
+      "usavel": true,
+      "tipo": "conteudo",
+      "pergunta": "Na certificação Fitwel v3, qual a diferença entre a Built Certification e a Design Certification?",
+      "resposta_esperada": "A Built Certification é para projetos existentes ou recém-concluídos e ocupados; a Design Certification é para projetos em projeto, em obra ou concluídos mas ainda não ocupados.",
+      "evidencia": "DESIGN CERTIFICATION ... Available to projects that are currently in design, under construction, or recently completed but not yet occupied."
+    },
+    {
+      "id": "C11",
+      "doc": "doc11.txt",
+      "usavel": true,
+      "tipo": "lista",
+      "pergunta": "Nas notas do Kenji sobre ferramentas de IA, quais ambientes têm prompts prontos de retrofit de apartamento?",
+      "resposta_esperada": "Há 4 prompts prontos: sala, cozinha, quarto e banheiro (além de um diagnóstico da v1 que falhou).",
+      "evidencia": "4 prompts prontos (sala, cozinha, quarto, banheiro) + diagnóstico da v1 que falhou"
+    },
+    {
+      "id": "C12",
+      "doc": "doc12.txt",
+      "usavel": true,
+      "tipo": "responsavel",
+      "pergunta": "Quem foi o arquiteto do Edifício Tiziano, do apartamento de Ipanema (RJ-001), e em que ano o prédio foi entregue?",
+      "resposta_esperada": "O projeto é de Edison Musa, e o edifício foi entregue em 1970.",
+      "evidencia": "Entregue em 1970, no ápice da consolidação cultural e arquitetônica de Ipanema... O projeto carrega o traço inconfundível de Edison Musa"
+    },
+    {
+      "id": "C13",
+      "doc": "doc13.txt",
+      "usavel": true,
+      "tipo": "fato",
+      "pergunta": "Nos diagramas elétricos do Meraki, qual é a tensão e a corrente do barramento dos quadros dos apartamentos (ex.: AP303A, AP401A)?",
+      "resposta_esperada": "Quadros PVC de embutir, 220/380V trifásico (3F+N+T), com barramento de 63 A e Icc de 10 kA.",
+      "evidencia": "1. Quadro PVC de embutir; 2. 220/380V Trifásico (3F+N+T); 3. Barramento 63 A; 4. Icc Barramento10 kA;"
+    },
+    {
+      "id": "C14",
+      "doc": "doc14.txt",
+      "usavel": true,
+      "tipo": "fato",
+      "pergunta": "Enquanto a versão 31 do Documento Fundador está em proposta, qual versão vale como fonte da verdade?",
+      "resposta_esperada": "A versão 30, fixada pela Ata de 25/06/2026, até o reconhecimento da v31 pelos três órgãos (Comitê Técnico, Comitê Executivo e Conselho Curador).",
+      "evidencia": "Até o reconhecimento pelos três órgãos, a única fonte da verdade segue sendo a versão 30, fixada pela Ata de 25/06/2026."
+    },
+    {
+      "id": "C15",
+      "doc": "doc15.txt",
+      "usavel": true,
+      "tipo": "conteudo",
+      "pergunta": "Se der problema no app da certificação EDGE, onde abro o chamado? E dúvidas técnicas que não são bug, mando para onde?",
+      "resposta_esperada": "Problemas do app vão por service ticket em app.edgebuildings.com/user/service-ticket; outras dúvidas (ex.: building science) vão por e-mail para edge@ifg.org.",
+      "evidencia": "Please email those other queries to edge@ifg.org."
+    }
+  ]
+}
