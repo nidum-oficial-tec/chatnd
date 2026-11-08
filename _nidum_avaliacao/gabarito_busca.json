@@ -1,0 +1,889 @@
+{
+  "versao": "rascunho-2026-11-07",
+  "itens": [
+    {
+      "id": "F01",
+      "tipo": "fato",
+      "pergunta": "Qual o número máximo de coautores da Nidum?",
+      "consulta_palavras": "numero maximo de coautores nidum coautoria 60",
+      "ouro": [
+        "Nidum Documento Fundador - v30",
+        "NIDUM_APRES_IMPRENSA"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "FONTE/Nidum Documento Fundador - v30.md",
+        "FONTE/NIDUM_APRES_IMPRENSA.md"
+      ],
+      "evidencia": "A Coautoria divide-se entre os 60 coautores",
+      "resposta_esperada": "60 coautores, em paridade plena (cada um com 1/60 da Coautoria).",
+      "origem_da_pergunta": "evals/perguntas.json#1"
+    },
+    {
+      "id": "F02",
+      "tipo": "fato",
+      "pergunta": "Qual o take rate da Nidum na plataforma Prumo?",
+      "consulta_palavras": "take rate nidum plataforma prumo percentual servicos",
+      "ouro": [
+        "ACA_Apresentação da Plataforma Prumo_29-07-2026",
+        "ACA_Nidum Prumo_29-07-2026"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "ACA/ACA_Apresentação da Plataforma Prumo_29-07-2026.md",
+        "ACA/ACA_Nidum Prumo_29-07-2026.fatos.md"
+      ],
+      "evidencia": "O take rate da Nidum foi definido em 12%",
+      "resposta_esperada": "12% sobre o valor dos serviços intermediados pela Prumo (reunião de 29/07/2026).",
+      "origem_da_pergunta": "evals/perguntas.json#2"
+    },
+    {
+      "id": "F03",
+      "tipo": "fato",
+      "pergunta": "Quem participou da reunião de alinhamento de time da tecnologia em 03/08/2026?",
+      "consulta_palavras": "participantes reuniao alinhamento de time tecnologia 03/08/2026",
+      "ouro": [
+        "TEC_Alinhamento de Time_03-08-2026"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "TEC/TEC_Alinhamento de Time_03-08-2026.md",
+        "TEC/TEC_Alinhamento de time_03-08-2026.fatos.md"
+      ],
+      "evidencia": "Participantes: Thiago Henrique Trindade, Davi Agonilha Vittori",
+      "resposta_esperada": "Thiago Henrique Trindade e Davi Agonilha Vittori.",
+      "origem_da_pergunta": "evals/perguntas.json#3"
+    },
+    {
+      "id": "F04",
+      "tipo": "fato",
+      "pergunta": "Qual é o CNPJ da Nidum?",
+      "consulta_palavras": "cnpj nidum empreendimentos e participacoes ltda",
+      "ouro": [
+        "04. Nidum - 1ª ACS",
+        "03. QSA Nidum"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "Juridico/Atos Constitutivos (público)/04. Nidum - 1ª ACS.md",
+        "Juridico/Atos Constitutivos (público)/03. QSA Nidum.md"
+      ],
+      "evidencia": "CNPJ nº 67.748.985/0001-09 | NIRE 41214908724",
+      "resposta_esperada": "67.748.985/0001-09 (Nidum Empreendimentos e Participações Ltda.).",
+      "origem_da_pergunta": "evals/perguntas.json#4"
+    },
+    {
+      "id": "F05",
+      "tipo": "fato",
+      "pergunta": "Qual empresa presta o serviço de helpdesk de escritório contratado pela Nidum?",
+      "consulta_palavras": "empresa servico helpdesk service desk contrato ti microsoft 365",
+      "ouro": [
+        "TEC_ContratoOfficeHelpDeskSystemFrame"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "TEC/TEC_ContratoOfficeHelpDeskSystemFrame_29072026_v1.md"
+      ],
+      "evidencia": "SYSTEM FRAME GROUP SERVICOS DE TI LTDA",
+      "resposta_esperada": "System Frame Group Serviços de TI Ltda. (Service Desk e licenças Microsoft 365).",
+      "origem_da_pergunta": "evals/perguntas.json#5"
+    },
+    {
+      "id": "F06",
+      "tipo": "fato",
+      "pergunta": "Qual foi a duração da reunião da Frente Comercial e Modelo de Venda?",
+      "consulta_palavras": "duracao reuniao frente comercial modelo de venda",
+      "ouro": [
+        "BRA_Frente Comercial e Modelo de Venda_10-07-2026"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "BRA/BRA_Frente Comercial e Modelo de Venda_10-07-2026.md"
+      ],
+      "evidencia": "Duração: 59min51s",
+      "resposta_esperada": "59min51s (reunião de 10/07/2026).",
+      "origem_da_pergunta": "evals/perguntas.json#6"
+    },
+    {
+      "id": "F07",
+      "tipo": "fato",
+      "pergunta": "O que a Lei 13.542/2022 de Londrina estabelece?",
+      "consulta_palavras": "lei 13542 2022 londrina plano de acao e investimentos plano diretor",
+      "ouro": [
+        "LEI 13.542_2022_PAI"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "Produtos/Comunidades Vivas - Londrina/IPPUL/LEI 13.542_2022_PAI.md",
+        "Produtos/Nidum Comunidades Vivas/IPPUL/LEI 13.542_2022_PAI.md"
+      ],
+      "evidencia": "LEI Nº 13.542, DE 22 DE DEZEMBRO DE 2022",
+      "resposta_esperada": "Acrescenta o Anexo V (Plano de Ação e Investimentos 2022-2031) e altera o art. 4º da Lei 13.339/2022 do Plano Diretor Participativo de Londrina.",
+      "origem_da_pergunta": "evals/perguntas.json#10"
+    },
+    {
+      "id": "F08",
+      "tipo": "fato",
+      "pergunta": "Quem conduziu a reunião semanal de coautores de 13/07/2026 e quem apresentou a evolução do Brandbook?",
+      "consulta_palavras": "reuniao semanal coautores 13/07/2026 conducao brandbook apresentou",
+      "ouro": [
+        "BRA_Reunião Semanal de Coautores_13-07-2026"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "BRA/BRA_Reunião Semanal de Coautores_13-07-2026.md"
+      ],
+      "evidencia": "Bruna apresentou a evolução do Brandbook",
+      "resposta_esperada": "Conduzida por Sérgio Ribas; a evolução do Brandbook foi apresentada pela Bruna.",
+      "origem_da_pergunta": "banco_perguntas#P2+P3"
+    },
+    {
+      "id": "F09",
+      "tipo": "fato",
+      "pergunta": "O que a reunião de 08/07/2026 decidiu sobre o ponto de entrada da captação de imóveis?",
+      "consulta_palavras": "reuniao 08/07/2026 captacao imoveis ponto de entrada proprietario",
+      "ouro": [
+        "BRA_Comercialização Captação e Modelo de Investimento_08-07-2026"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "BRA/BRA_Comercialização Captação e Modelo de Investimento_08-07-2026.md"
+      ],
+      "evidencia": "o proprietário passa a ser o ponto de entrada",
+      "resposta_esperada": "O proprietário passa a ser o ponto de entrada (cliente inicial); o imóvel deixa de ser a porta de entrada.",
+      "origem_da_pergunta": "banco_perguntas#P4"
+    },
+    {
+      "id": "F10",
+      "tipo": "fato",
+      "pergunta": "Quais são as condições de pagamento do escaneamento 3D (Lidar) do MVP Ipanema?",
+      "consulta_palavras": "escaneamento 3d lidar mvp ipanema pagamento valor 30% adiantamento",
+      "ouro": [
+        "Termo_Contratacao_Escaneamento_3D_Nidum_2"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "Juridico/Contratos (Público)/Lidar Topografia Industrial e Escanemaneto/Termo_Contratacao_Escaneamento_3D_Nidum_2_assinado_assinado.md",
+        "Juridico/Institucional/Contratos/CONTRATOS NIDUM MVP IPANEMA/Termo_Contratacao_Escaneamento_3D_Nidum_2_assinado_assinado.md",
+        "Projetos/Retrofits/RJ-001 Ipanema/5. Propostas e Contratos/CONTRATOS/Termo_Contratacao_Escaneamento_3D_Nidum_2.md"
+      ],
+      "evidencia": "70% após a entrega, aceite e emissão da nota fiscal",
+      "resposta_esperada": "Preço global de R$ 3.700,00; 30% até 2 dias antes do campo e 70% após entrega, aceite e nota fiscal (Lidar Topografia).",
+      "origem_da_pergunta": "evals/perguntas.json#32 (era armadilha; o termo agora existe na base)"
+    },
+    {
+      "id": "F11",
+      "tipo": "fato",
+      "pergunta": "Qual foi a vocação vencedora da análise de vocação mercadológica da Fazenda Fortaleza?",
+      "consulta_palavras": "analise vocacao mercadologica fazenda fortaleza vocacao vencedora etapa 2 score",
+      "ouro": [
+        "FAZ_Etapa 2_Leitura-Aplicada-Ponto-de-Integridade-do-Ativo"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "EGP/3.1.3 Portfólio de Projetos/1. Projeto Fazenda Fortaleza/1.2 Documentos/FAZ_Etapa 2_Leitura-Aplicada-Ponto-de-Integridade-do-Ativo_v2.md",
+        "Projetos/Desenvolvimento Imobiliario/1 - Fazenda Fortaleza/2. Análise de Potencial/AVALIAÇÃO DO IMÓVEL/FAZ_Etapa 2_Leitura-Aplicada-Ponto-de-Integridade-do-Ativo_v2.md"
+      ],
+      "evidencia": "Fortaleza — Ranch & Reserve com score 8,20",
+      "resposta_esperada": "Fortaleza — Ranch & Reserve (score 8,20): hotel-âncora premium + real estate + centro equestre, CAPEX R$ 140 mi, TIR 19,6%.",
+      "origem_da_pergunta": "evals/perguntas.json#31 (era armadilha; a Etapa 2 resume a análise)"
+    },
+    {
+      "id": "F12",
+      "tipo": "fato",
+      "pergunta": "Quais são as questões em aberto da convergência de Comunidades Vivas de 08/06/2026?",
+      "consulta_palavras": "convergencia comunidades vivas 08/06/2026 questoes em aberto",
+      "ouro": [
+        "CVI_Convergência_08-06-2026"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "CVI/CVI_Convergência_08-06-2026.md"
+      ],
+      "evidencia": "A relação com o entorno e a especulação.",
+      "resposta_esperada": "Quatro: critério de convergência de valores; a escuta que precede o desenho; a permanência da Academia e seu modelo; a relação com o entorno e a especulação.",
+      "origem_da_pergunta": "banco_perguntas#P8"
+    },
+    {
+      "id": "F13",
+      "tipo": "fato",
+      "pergunta": "Sobre o que trata a convergência do Comitê Técnico de 27/06/2026?",
+      "consulta_palavras": "convergencia comite tecnico 27/06/2026 arquitetos coautores",
+      "ouro": [
+        "CTE_Convergência_27-06-2026"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "Reuniões/Atas/CTE_Convergência_27-06-2026.md"
+      ],
+      "evidencia": "sobre o lugar dos arquitetos coautores e os",
+      "resposta_esperada": "O lugar dos arquitetos coautores e os fundamentos da coautoria, lidos contra a Fonte (Comitê Técnico).",
+      "origem_da_pergunta": "evals/perguntas.json#11 (pergunta original dizia 'jurídico'; o doc é do Comitê Técnico)"
+    },
+    {
+      "id": "R01",
+      "tipo": "recencia",
+      "pergunta": "Quais as datas das reuniões mais recentes?",
+      "consulta_palavras": "reunioes mais recentes datas ultima ata",
+      "ouro": [
+        "PROJ_Acompanhamento Semanal de Projetos_06-11-2026",
+        "PROD_Calculadora de Viabilidade de Projetos_06-11-2026",
+        "PROD_Avaliação de Laudo e Indicadores Nidum_06-11-2026",
+        "MUN_Planejamento Piloto Reparo e Reforma_06-11-2026",
+        "ACA_Apresentação da Plataforma Prumo_06-11-2026"
+      ],
+      "ouro_minimo": 2,
+      "caminhos": [
+        "Reuniões/Atas/PROJ_Acompanhamento Semanal de Projetos_06-11-2026_AUTO.md",
+        "PROD/PROD_Calculadora de Viabilidade de Projetos_06-11-2026_AUTO.md",
+        "PROD/PROD_Avaliação de Laudo e Indicadores Nidum_06-11-2026_AUTO.md",
+        "MUN/MUN_Planejamento Piloto Reparo e Reforma_06-11-2026_AUTO.md",
+        "ACA/ACA_Apresentação da Plataforma Prumo_06-11-2026_AUTO.md"
+      ],
+      "evidencia": "Ata — Acompanhamento Semanal de Projetos",
+      "resposta_esperada": "06/11/2026 (Acompanhamento Semanal de Projetos, Calculadora de Viabilidade, Avaliação de Laudo, Piloto Reparo e Reforma, Plataforma Prumo); antes, 05/11/2026.",
+      "origem_da_pergunta": "nova (caso obrigatório 2)"
+    },
+    {
+      "id": "R02",
+      "tipo": "recencia",
+      "pergunta": "Qual a ata mais recente sobre Ipanema e o que foi decidido nela?",
+      "consulta_palavras": "ata mais recente ipanema decisoes ultima reuniao mvp ipanema",
+      "ouro": [
+        "OPE_Acompanhamento Projeto Ipanema_04-11-2026"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "OPE/OPE_Acompanhamento Projeto Ipanema_04-11-2026_AUTO.md"
+      ],
+      "evidencia": "O orçamento de Ipanema será feito em parceria com a construtora",
+      "resposta_esperada": "Ata de 04/11/2026: orçamento com a construtora até o dia 11; itens de sustentabilidade como premissas; calibração da plataforma de gêmeos com Jardins; foco no MVP para a apresentação do dia 13.",
+      "origem_da_pergunta": "nova (caso obrigatório 3)"
+    },
+    {
+      "id": "R03",
+      "tipo": "recencia",
+      "pergunta": "Qual foi a última reunião de acompanhamento do Comitê de Projetos?",
+      "consulta_palavras": "ultima reuniao acompanhamento comite de projetos cp apresentacao",
+      "ouro": [
+        "Reunião_Acompanhamento _CP_03.11.26"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "EGP/3.1.4 Apresentações Comitê de Projetos/2. Reunião de Acompanhamento/9.  Reunião_Acompanhamento _CP_03.11.26.md"
+      ],
+      "evidencia": "03 de novembro",
+      "resposta_esperada": "A de 03/11/2026 (9ª Reunião de Acompanhamento do CP).",
+      "origem_da_pergunta": "nova"
+    },
+    {
+      "id": "R04",
+      "tipo": "recencia",
+      "pergunta": "Qual é a versão mais recente do cronograma de Serra Negra?",
+      "consulta_palavras": "cronograma serra negra versao mais recente mvp",
+      "ouro": [
+        "BRA_CronogramaMVPISerraNegra_26_10_19_v1"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "BRA/BRA_CronogramaMVPISerraNegra_26_10_19_v1.md"
+      ],
+      "evidencia": "GATE 1 — Qualificação Jurídica e Adesão Concluída",
+      "resposta_esperada": "BRA_CronogramaMVPISerraNegra_26_10_19_v1 (19/10/2026).",
+      "origem_da_pergunta": "nova"
+    },
+    {
+      "id": "R05",
+      "tipo": "recencia",
+      "pergunta": "Qual a versão mais recente do cronograma da Fazenda Fortaleza?",
+      "consulta_palavras": "cronograma fazenda fortaleza versao mais recente",
+      "ouro": [
+        "FAZ_Cronograma_26_10_08_v9"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "EGP/3.1.3 Portfólio de Projetos/1. Projeto Fazenda Fortaleza/1.1 Cronogramas/FAZ_Cronograma_26_10_08_v9.md"
+      ],
+      "evidencia": "Descrição: PROJETO (GERAL) - Fazenda Fortaleza",
+      "resposta_esperada": "FAZ_Cronograma_26_10_08_v9 (08/10/2026), na pasta EGP > 3.1.3 Portfólio de Projetos.",
+      "origem_da_pergunta": "nova"
+    },
+    {
+      "id": "R06",
+      "tipo": "recencia",
+      "pergunta": "Qual é o cronograma mais atualizado do MVP Ipanema?",
+      "consulta_palavras": "cronograma mvp ipanema mais atualizado versao recente",
+      "ouro": [
+        "Cronograma MVP Ipanema V30. 27.10.26"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "Projetos/Retrofits/RJ-001 Ipanema/0. Cronograma/Cronograma MVP Ipanema V30. 27.10.26.md"
+      ],
+      "evidencia": "A ordem, IDs e descrições da atualização de 26/10 foram mantidos.",
+      "resposta_esperada": "Cronograma MVP Ipanema V30 de 27/10/2026 (consolida o BRA_Cronograma_26_10_19_v1 sobre a linha de base v11).",
+      "origem_da_pergunta": "nova"
+    },
+    {
+      "id": "R07",
+      "tipo": "recencia",
+      "pergunta": "Quando foi a última reunião semanal da Academia e o que tratou?",
+      "consulta_palavras": "ultima reuniao semanal academia data pauta",
+      "ouro": [
+        "GER_Academia - Reunião Semanal_14-10-2026"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "Reuniões/Atas/GER_Academia - Reunião Semanal_14-10-2026_AUTO.md"
+      ],
+      "evidencia": "Ata — Reunião Semanal da Academia / Onboarding de Fornecedores",
+      "resposta_esperada": "14/10/2026: onboarding de fornecedores (frequência, formato, responsabilidades) e estrutura da Academia na plataforma.",
+      "origem_da_pergunta": "nova"
+    },
+    {
+      "id": "R08",
+      "tipo": "recencia",
+      "pergunta": "Qual foi a reunião semanal de operações mais recente?",
+      "consulta_palavras": "reuniao semanal operacoes mais recente ultima ecossistema operacoes",
+      "ouro": [
+        "OPE_Reunião semanal de operações_21-10-2026"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "OPE/OPE_Reunião semanal de operações_21-10-2026_AUTO.md"
+      ],
+      "evidencia": "Ata — Reunião semanal de operações",
+      "resposta_esperada": "21/10/2026: preparação da apresentação ao cliente de Ipanema (tour 360°, Revit/BIM, gêmeo digital).",
+      "origem_da_pergunta": "nova"
+    },
+    {
+      "id": "R09",
+      "tipo": "recencia",
+      "pergunta": "Qual é a edição mais recente do Informativo Executivo da Nidum?",
+      "consulta_palavras": "informativo executivo nidum edicao mais recente ultima",
+      "ouro": [
+        "ACA_Informativo_Executivo_Nidum_10ª_Edição"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "ACA/ACA_Informativo_Executivo_Nidum_10ª_Edição.md"
+      ],
+      "evidencia": "10ª edição 16 a 31 de outubro de 2026",
+      "resposta_esperada": "A 10ª edição, referente a 16 a 31 de outubro de 2026.",
+      "origem_da_pergunta": "nova"
+    },
+    {
+      "id": "L01",
+      "tipo": "lista",
+      "pergunta": "Em qual fase (iniciação, planejamento, execução e controle, fechamento) está cada projeto da Nidum?",
+      "consulta_palavras": "status do projeto fase planejamento execucao encerramento iniciacao",
+      "ouro": [
+        "Reunião_Acompanhamento _CP_03.11.26",
+        "PROJ_Acompanhamento Semanal de Portfólio_22-09-2026",
+        "PROJ_Acompanhamento de Projetos Portfólio Nidum_15-09-2026"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "EGP/3.1.4 Apresentações Comitê de Projetos/2. Reunião de Acompanhamento/9.  Reunião_Acompanhamento _CP_03.11.26.md",
+        "Reuniões/Atas/PROJ_Acompanhamento Semanal de Portfólio_22-09-2026.md",
+        "Reuniões/Atas/PROJ_Acompanhamento de Projetos Portfólio Nidum_15-09-2026.md"
+      ],
+      "evidencia": "PORTFÓLIO POR FASE DE GESTÃO",
+      "resposta_esperada": "Os 15 projetos do portfólio estão na fase de Iniciação (CP 03/11/2026; atas de 15/09 e 22/09 confirmam 'todos na fase de iniciação').",
+      "origem_da_pergunta": "nova (caso obrigatório 1)"
+    },
+    {
+      "id": "L02",
+      "tipo": "lista",
+      "pergunta": "Liste todas as convergências realizadas em junho de 2026.",
+      "consulta_palavras": "convergencias junho 2026 lista convergencia inteligencia hibrida",
+      "ouro": [
+        "ACA_Convergência_10-06-2026",
+        "BRA_Convergência_16-06-2026",
+        "CVI_Convergência_08-06-2026",
+        "CVI_Convergência_23-06-2026",
+        "FAN_Convergência_17-06-2026",
+        "MKT_Convergência_11-06-2026",
+        "MUN_Convergência_18-06-2026",
+        "OPE_Convergência_01-06-2026",
+        "SUS_Convergência_09-06-2026",
+        "CTE_Convergência_27-06-2026",
+        "GER_Convergência_25-06-2026",
+        "GER_Convergência_29-06-2026"
+      ],
+      "ouro_minimo": 12,
+      "caminhos": [
+        "ACA/ACA_Convergência_10-06-2026.md",
+        "BRA/BRA_Convergência_16-06-2026.md",
+        "CVI/CVI_Convergência_08-06-2026.md",
+        "CVI/CVI_Convergência_23-06-2026.md",
+        "FAN/FAN_Convergência_17-06-2026.md",
+        "MKT/MKT_Convergência_11-06-2026.md",
+        "MUN/MUN_Convergência_18-06-2026.md",
+        "OPE/OPE_Convergência_01-06-2026.md",
+        "SUS/SUS_Convergência_09-06-2026.md",
+        "Reuniões/Atas/CTE_Convergência_27-06-2026.md",
+        "Reuniões/Atas/GER_Convergência_25-06-2026.md",
+        "Reuniões/Atas/GER_Convergência_29-06-2026.md"
+      ],
+      "evidencia": "beleza · bondade · justiça · verdade",
+      "resposta_esperada": "12: OPE 01/06, CVI 08/06, SUS 09/06, ACA 10/06, MKT 11/06, BRA 16/06, FAN 17/06, MUN 18/06, CVI 23/06, GER 25/06, CTE 27/06, GER 29/06.",
+      "origem_da_pergunta": "evals/perguntas.json#21"
+    },
+    {
+      "id": "L03",
+      "tipo": "lista",
+      "pergunta": "Quais reuniões o ecossistema de marketing realizou em agosto de 2026? Liste todas.",
+      "consulta_palavras": "reunioes marketing agosto 2026 atas mkt lista",
+      "ouro": [
+        "MKT_Reunião Aberta de Marketing_04-08-2026",
+        "MKT_Discussão de Narrativa da Metodologia_10-08-2026",
+        "MKT_Narrativa Ninho e Fluxo Metodológico_10-08-2026",
+        "MKT_Planejamento Estratégico de Marketing_10-08-2026",
+        "MKT_Conversa de Marketing com Amélia_11-08-2026",
+        "MKT_Estratégia de Comercialização e Jornada Prumo_11-08-2026",
+        "MKT_Guia Nidum Sustentável_14-08-2026",
+        "MKT_Estratégia de Lançamento_17-08-2026",
+        "MKT_Marketing Nidum Mundo e Brasil_17-08-2026",
+        "MKT_Marketing Nidum Mundo e Brasil_18-08-2026",
+        "MKT_Apresentação do Modelo de Negócio_18-08-2026",
+        "MKT_Modelo de Leilão e Descoberta de Valor_20-08-2026"
+      ],
+      "ouro_minimo": 12,
+      "caminhos": [
+        "MKT/MKT_Reunião Aberta de Marketing_04-08-2026.md",
+        "MKT/MKT_Discussão de Narrativa da Metodologia_10-08-2026.fatos.md",
+        "MKT/MKT_Discussão de Narrativa da Metodologia_10-08-2026.md",
+        "MKT/MKT_Narrativa Ninho e Fluxo Metodológico_10-08-2026.md",
+        "MKT/MKT_Planejamento Estratégico de Marketing_10-08-2026_AUTO.md",
+        "MKT/MKT_Conversa de Marketing com Amélia_11-08-2026.md",
+        "MKT/MKT_Estratégia de Comercialização e Jornada Prumo_11-08-2026_AUTO.md",
+        "MKT/MKT_Guia Nidum Sustentável_14-08-2026_AUTO.md",
+        "MKT/MKT_Estratégia de Lançamento_17-08-2026.fatos.md",
+        "MKT/MKT_Estratégia de Lançamento_17-08-2026.md",
+        "MKT/MKT_Marketing Nidum Mundo e Brasil_17-08-2026.md",
+        "MKT/MKT_Marketing Nidum Mundo e Brasil_18-08-2026.md",
+        "MKT/MKT_Apresentação do Modelo de Negócio_18-08-2026.md",
+        "MKT/MKT_Modelo de Leilão e Descoberta de Valor_20-08-2026_AUTO.md"
+      ],
+      "evidencia": "Ata — Reunião aberta de Marketing",
+      "resposta_esperada": "12 reuniões MKT em agosto/2026: 04/08 reunião aberta; 10/08 narrativa da metodologia, narrativa ninho, planejamento estratégico; 11/08 conversa com Amélia, jornada Prumo; 14/08 guia sustentável; 17/08 estratégia de lançamento, Mundo e Brasil; 18/08 Mundo e Brasil, modelo de negócio; 20/08 modelo de leilão.",
+      "origem_da_pergunta": "evals/perguntas.json#24"
+    },
+    {
+      "id": "L04",
+      "tipo": "lista",
+      "pergunta": "Liste todos os projetos que possuem cronograma na base.",
+      "consulta_palavras": "projetos com cronograma lista cronogramas base",
+      "ouro": [
+        "FAZ_Cronograma_",
+        "BRA_Cronograma_",
+        "BRA_CronogramaMVPISerraNegra",
+        "BRA_CronogramaMVPJardins",
+        "BRA_CronogramaMVPVirginia",
+        "Comunidades_Vivas_",
+        "PGP_Implantação Nidum Mundo",
+        "Cronograma_Artefacto_Towers",
+        "Cronograma_Meraki_Sunset"
+      ],
+      "ouro_minimo": 9,
+      "caminhos": [
+        "EGP/3.1.3 Portfólio de Projetos/1. Projeto Fazenda Fortaleza/1.1 Cronogramas/FAZ_Cronograma_26_07_21_v1.md",
+        "EGP/3.1.3 Portfólio de Projetos/1. Projeto Fazenda Fortaleza/1.1 Cronogramas/FAZ_Cronograma_26_07_27_v2.md",
+        "EGP/3.1.3 Portfólio de Projetos/1. Projeto Fazenda Fortaleza/1.1 Cronogramas/FAZ_Cronograma_26_07_31_v3.md",
+        "EGP/3.1.3 Portfólio de Projetos/1. Projeto Fazenda Fortaleza/1.1 Cronogramas/FAZ_Cronograma_26_08_13_v4.md",
+        "EGP/3.1.3 Portfólio de Projetos/1. Projeto Fazenda Fortaleza/1.1 Cronogramas/FAZ_Cronograma_26_08_20_v5.md",
+        "EGP/3.1.3 Portfólio de Projetos/1. Projeto Fazenda Fortaleza/1.1 Cronogramas/FAZ_Cronograma_26_09_03_v1.md",
+        "EGP/3.1.3 Portfólio de Projetos/1. Projeto Fazenda Fortaleza/1.1 Cronogramas/FAZ_Cronograma_26_09_14_v2.md",
+        "EGP/3.1.3 Portfólio de Projetos/1. Projeto Fazenda Fortaleza/1.1 Cronogramas/FAZ_Cronograma_26_09_17_v6.md",
+        "EGP/3.1.3 Portfólio de Projetos/1. Projeto Fazenda Fortaleza/1.1 Cronogramas/FAZ_Cronograma_26_09_24_v1.md",
+        "EGP/3.1.3 Portfólio de Projetos/1. Projeto Fazenda Fortaleza/1.1 Cronogramas/FAZ_Cronograma_26_09_24_v2.md",
+        "EGP/3.1.3 Portfólio de Projetos/1. Projeto Fazenda Fortaleza/1.1 Cronogramas/FAZ_Cronograma_26_10_01_v1.md",
+        "EGP/3.1.3 Portfólio de Projetos/1. Projeto Fazenda Fortaleza/1.1 Cronogramas/FAZ_Cronograma_26_10_08_v9.md",
+        "Projetos/Desenvolvimento Imobiliario/1 - Fazenda Fortaleza/0. Cronograma/FAZ_Cronograma_26_07_21_v1.md",
+        "Projetos/Desenvolvimento Imobiliario/1 - Fazenda Fortaleza/0. Cronograma/FAZ_Cronograma_26_07_27_v2.md",
+        "Projetos/Desenvolvimento Imobiliario/1 - Fazenda Fortaleza/0. Cronograma/FAZ_Cronograma_26_07_31_v3.md",
+        "Projetos/Desenvolvimento Imobiliario/1 - Fazenda Fortaleza/0. Cronograma/FAZ_Cronograma_26_08_13_v4.md",
+        "Projetos/Desenvolvimento Imobiliario/1 - Fazenda Fortaleza/0. Cronograma/FAZ_Cronograma_26_08_20_v5.md",
+        "Projetos/Desenvolvimento Imobiliario/1 - Fazenda Fortaleza/0. Cronograma/FAZ_Cronograma_26_09_03_v1.md",
+        "Projetos/Desenvolvimento Imobiliario/1 - Fazenda Fortaleza/0. Cronograma/FAZ_Cronograma_26_09_14_v2.md",
+        "BRA/BRA_Cronograma_26_07_21_v11.md",
+        "BRA/BRA_Cronograma_26_07_21_v13.md",
+        "BRA/BRA_Cronograma_26_09_03_v19.md",
+        "BRA/BRA_Cronograma_26_09_10_v20.md",
+        "BRA/BRA_Cronograma_26_09_17_v21.md",
+        "BRA/BRA_Cronograma_26_09_24_v1.md",
+        "BRA/BRA_Cronograma_26_10_01_v1.md",
+        "BRA/BRA_Cronograma_26_10_06_v22.md",
+        "BRA/BRA_Cronograma_26_10_08_v1.md",
+        "BRA/BRA_Cronograma_26_10_08_v23.md",
+        "BRA/BRA_Cronograma_26_10_15_v1.md",
+        "BRA/BRA_Cronograma_26_10_19_v1.md",
+        "BRA/BRA_CronogramaMVPISerraNegra_26_09_15_v1.md",
+        "BRA/BRA_CronogramaMVPISerraNegra_26_09_15_v2.md",
+        "BRA/BRA_CronogramaMVPISerraNegra_26_09_22_v1.md",
+        "BRA/BRA_CronogramaMVPISerraNegra_26_10_05_v1.md",
+        "BRA/BRA_CronogramaMVPISerraNegra_26_10_19_v1.md",
+        "BRA/BRA_CronogramaMVPJardins_26_09_02_v1.md",
+        "BRA/BRA_CronogramaMVPJardins_26_09_23_v1 - Copiar.md",
+        "BRA/BRA_CronogramaMVPJardins_26_10_14_v1.md",
+        "BRA/BRA_CronogramaMVPJardins_26_10_28_v1.md",
+        "BRA/BRA_CronogramaMVPJardins_30_09_02_v2.md",
+        "BRA/BRA_CronogramaMVPVirginia_26_09_23_v1.md",
+        "BRA/BRA_CronogramaMVPVirginia_30_09_23_v2.md",
+        "Projetos/Desenvolvimento Imobiliario/2 - Comunidades Vivas Londrina/0. Cronograma/01. Comunidades_Vivas_01.10.26 V1.md",
+        "Projetos/Desenvolvimento Imobiliario/2 - Comunidades Vivas Londrina/0. Cronograma/01. Comunidades_Vivas_26_10_05_V1.md",
+        "Projetos/Desenvolvimento Imobiliario/2 - Comunidades Vivas Londrina/0. Cronograma/01. Comunidades_Vivas_26_10_16_V1.md",
+        "Projetos/Corporativo/1. Implantação Nidum Mundo/Cronogramas/PGP_Implantação Nidum Mundo_30.09 V5.md",
+        "Projetos/Retrofits/SC-001 Artefacto/0. Cronograma/Cronograma_Artefacto_Towers (1).md",
+        "Projetos/Retrofits/SC-002 Meraki/0. Cronograma/Cronograma_Meraki_Sunset (1).md"
+      ],
+      "evidencia": "Fazenda Fortaleza - Cronograma",
+      "resposta_esperada": "9 projetos: Fazenda Fortaleza, MVP Ipanema, Serra Negra, Jardins, Virgínia, Comunidades Vivas (Londrina), Implantação Nidum Mundo, Artefacto e Meraki.",
+      "origem_da_pergunta": "evals/perguntas.json#23"
+    },
+    {
+      "id": "L05",
+      "tipo": "lista",
+      "pergunta": "Quais edições do Informativo Executivo da Nidum existem na base?",
+      "consulta_palavras": "informativo executivo nidum edicoes lista todas",
+      "ouro": [
+        "ACA_Informativo_Executivo_Nidum_3ªEdição",
+        "ACA_Informativo_Executivo_Nidum_4ªEdição",
+        "ACA_Informativo_Executivo_Nidum_5ªEdição",
+        "ACA_Informativo_Executivo_Nidum_6ª_Edição",
+        "ACA_Informativo_Executivo_Nidum_7ª_Edição",
+        "ACA_Informativo_Executivo_Nidum_8ª_Edição",
+        "ACA_Informativo_Executivo_Nidum_9ª_Edição",
+        "ACA_Informativo_Executivo_Nidum_10ª_Edição"
+      ],
+      "ouro_minimo": 8,
+      "caminhos": [
+        "ACA/ACA_Informativo_Executivo_Nidum_3ªEdição.md",
+        "ACA/ACA_Informativo_Executivo_Nidum_4ªEdição.md",
+        "ACA/ACA_Informativo_Executivo_Nidum_5ªEdição.md",
+        "ACA/ACA_Informativo_Executivo_Nidum_6ª_Edição.md",
+        "ACA/ACA_Informativo_Executivo_Nidum_7ª_Edição.md",
+        "ACA/ACA_Informativo_Executivo_Nidum_8ª_Edição.md",
+        "ACA/ACA_Informativo_Executivo_Nidum_9ª_Edição.md",
+        "ACA/ACA_Informativo_Executivo_Nidum_10ª_Edição.md"
+      ],
+      "evidencia": "Informativo Nidum - 3ª edição",
+      "resposta_esperada": "Da 3ª à 10ª edição (8 edições); não há 1ª nem 2ª na base.",
+      "origem_da_pergunta": "nova"
+    },
+    {
+      "id": "L06",
+      "tipo": "lista",
+      "pergunta": "Liste as reuniões de Planejamento do MVP Ipanema realizadas em setembro de 2026.",
+      "consulta_palavras": "reunioes planejamento mvp ipanema setembro 2026 atas",
+      "ouro": [
+        "PROJ_Planejamento MVP Ipanema_03-09-2026",
+        "PROJ_Planejamento MVP Ipanema_10-09-2026",
+        "PROJ_Planejamento MVP Ipanema_17-09-2026",
+        "PROJ_Planejamento MVP Ipanema_24-09-2026"
+      ],
+      "ouro_minimo": 4,
+      "caminhos": [
+        "Reuniões/Atas/PROJ_Planejamento MVP Ipanema_03-09-2026_AUTO.md",
+        "Reuniões/Atas/PROJ_Planejamento MVP Ipanema_10-09-2026_AUTO.md",
+        "Reuniões/Atas/PROJ_Planejamento MVP Ipanema_17-09-2026_AUTO.md",
+        "Reuniões/Atas/PROJ_Planejamento MVP Ipanema_24-09-2026_AUTO.md"
+      ],
+      "evidencia": "Ata — Planejamento MVP Ipanema",
+      "resposta_esperada": "Quatro: 03/09, 10/09, 17/09 e 24/09/2026.",
+      "origem_da_pergunta": "nova"
+    },
+    {
+      "id": "T01",
+      "tipo": "tabela_slide",
+      "pergunta": "Quem é o gestor do projeto Jardins segundo a reunião do Comitê de Projetos de 03/11?",
+      "consulta_palavras": "gestor projeto jardins comite de projetos portfolio dono gestor",
+      "ouro": [
+        "Reunião_Acompanhamento _CP_03.11.26"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "EGP/3.1.4 Apresentações Comitê de Projetos/2. Reunião de Acompanhamento/9.  Reunião_Acompanhamento _CP_03.11.26.md"
+      ],
+      "evidencia": "| Jardins | Rodrigo V. | Fernando N. | SP |",
+      "resposta_esperada": "Fernando N. (Fernando Neves); dono Rodrigo V.; plataforma SP.",
+      "origem_da_pergunta": "nova"
+    },
+    {
+      "id": "T02",
+      "tipo": "tabela_slide",
+      "pergunta": "Quantos projetos há no portfólio da Nidum e como se distribuem por programa?",
+      "consulta_palavras": "quantidade projetos portfolio distribuicao por programa retrofit corporativo desenvolvimento imobiliario",
+      "ouro": [
+        "Reunião_Acompanhamento _CP_03.11.26"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "EGP/3.1.4 Apresentações Comitê de Projetos/2. Reunião de Acompanhamento/9.  Reunião_Acompanhamento _CP_03.11.26.md"
+      ],
+      "evidencia": "| Retrofit | 8.0 |",
+      "resposta_esperada": "15 projetos: 8 Retrofit, 4 Corporativo e 3 Desenvolvimento Imobiliário (CP 03/11/2026).",
+      "origem_da_pergunta": "nova"
+    },
+    {
+      "id": "T03",
+      "tipo": "tabela_slide",
+      "pergunta": "Qual o término planejado e o término tendência do MVP Ipanema?",
+      "consulta_palavras": "mvp ipanema termino planejado tendencia prazo",
+      "ouro": [
+        "Reunião_Acompanhamento _CP_03.11.26"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "EGP/3.1.4 Apresentações Comitê de Projetos/2. Reunião de Acompanhamento/9.  Reunião_Acompanhamento _CP_03.11.26.md"
+      ],
+      "evidencia": "Término Planejado: 28/10/2026",
+      "resposta_esperada": "Planejado 28/10/2026; tendência 20/11/2026 (CP 03/11/2026).",
+      "origem_da_pergunta": "nova"
+    },
+    {
+      "id": "T04",
+      "tipo": "tabela_slide",
+      "pergunta": "No cronograma mais recente de Serra Negra, quem faz a Due Diligence intermediária e quando?",
+      "consulta_palavras": "cronograma serra negra due diligence intermediaria responsavel data",
+      "ouro": [
+        "BRA_CronogramaMVPISerraNegra_26_10_19_v1"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "BRA/BRA_CronogramaMVPISerraNegra_26_10_19_v1.md"
+      ],
+      "evidencia": "Realizar Due Diligence \"Intermediária\" (análise jurídica)",
+      "resposta_esperada": "Daniel, planejada de 05/11 a 12/11/2026 (Gate 1 em 12/11/2026).",
+      "origem_da_pergunta": "nova"
+    },
+    {
+      "id": "T05",
+      "tipo": "tabela_slide",
+      "pergunta": "No cronograma da Fazenda Fortaleza, quem foi o responsável pela Análise de Vocação v1 e qual o status?",
+      "consulta_palavras": "cronograma fazenda fortaleza analise de vocacao v1 responsavel status",
+      "ouro": [
+        "FAZ_Cronograma_26_10_08_v9"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "EGP/3.1.3 Portfólio de Projetos/1. Projeto Fazenda Fortaleza/1.1 Cronogramas/FAZ_Cronograma_26_10_08_v9.md"
+      ],
+      "evidencia": "Desenvolver Análise de Vocação v1",
+      "resposta_esperada": "Alex; concluída (23/07 a 31/07/2026, 100%).",
+      "origem_da_pergunta": "nova"
+    },
+    {
+      "id": "T06",
+      "tipo": "tabela_slide",
+      "pergunta": "Quem são o dono e o gestor do projeto Implantação Nidum Mundo segundo o TAP?",
+      "consulta_palavras": "tap implantacao nidum mundo dono gestor projeto pgp",
+      "ouro": [
+        "PGP_Implantação Nidum Mundo"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "Projetos/Corporativo/1. Implantação Nidum Mundo/Cronogramas/PGP_Implantação Nidum Mundo_30.09 V5.md"
+      ],
+      "evidencia": "Gestor do Projeto | Mun\\_001: Amélia Reiss",
+      "resposta_esperada": "Dono Emerson Silva; gestora Amélia Reiss; cliente Sérgio Ribas; TAP aprovado em 01/09/2026.",
+      "origem_da_pergunta": "nova"
+    },
+    {
+      "id": "E01",
+      "tipo": "tema",
+      "pergunta": "O que o brandbook define sobre a fonte tipográfica da Nidum?",
+      "consulta_palavras": "brandbook tipografia fonte maxima nova ibrand logotipo",
+      "ouro": [
+        "MKT_BrandbookNidum_10072026_V1",
+        "Brandbook_Nidum_V1"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "MKT/MKT_BrandbookNidum_10072026_V1.md",
+        "Marketing/01. Marca/Brandbook_Nidum_V1.md",
+        "Tecnologia/5. Ferramentas/Projetos Textuais/Notas Kenji/Notas/Brandbook_Nidum_V1.md"
+      ],
+      "evidencia": "optamos pela família tipográfica",
+      "resposta_esperada": "Maxima Nova para títulos e textos longos; iBrand na construção do logotipo.",
+      "origem_da_pergunta": "evals/perguntas.json#7"
+    },
+    {
+      "id": "E02",
+      "tipo": "tema",
+      "pergunta": "O que é intenção reta?",
+      "consulta_palavras": "intencao reta conceito nidum documento fundador",
+      "ouro": [
+        "Nidum Documento Fundador - v30",
+        "Nidum Documento Fundador - v29",
+        "Nidum Documento Fundador Versão 31"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "FONTE/Nidum Documento Fundador - v30.md",
+        "FONTE/Nidum Documento Fundador - v29.md",
+        "FONTE/Nidum Documento Fundador Versão 31.md"
+      ],
+      "evidencia": "A intenção reta é esse centro na Nidum.",
+      "resposta_esperada": "O centro da Nidum: a intenção que já nasce reta no nome (o ninho como objeto de um fazer), da qual deriva toda a forma (Documento Fundador v30).",
+      "origem_da_pergunta": "evals/perguntas.json#8"
+    },
+    {
+      "id": "E03",
+      "tipo": "tema",
+      "pergunta": "Como funciona o processo de gestão de projetos na metodologia da Nidum? Quais são as fases?",
+      "consulta_palavras": "metodologia gestao de projetos nidum fases iniciacao planejamento execucao controle encerramento",
+      "ouro": [
+        "Metodologia de Gestão de Projetos Nidum"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "EGP/3.1.1 Treinamento/Metodologia de Gestão de Projetos Nidum.md"
+      ],
+      "evidencia": "4 fases · 28 etapas da Jornada do Ativo",
+      "resposta_esperada": "Metodologia híbrida com 4 fases (Iniciação, Planejamento, Execução e Controle, Encerramento), 28 etapas da Jornada do Ativo e 2 frentes (Retrofit e Desenvolvimento Imobiliário).",
+      "origem_da_pergunta": "banco_perguntas#P6"
+    },
+    {
+      "id": "E04",
+      "tipo": "tema",
+      "pergunta": "O que a metodologia de gestão de projetos da Nidum define sobre o papel do EGP e a governança?",
+      "consulta_palavras": "metodologia gestao projetos egp escritorio governanca papeis comite executivo",
+      "ouro": [
+        "Metodologia de Gestão de Projetos Nidum"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "EGP/3.1.1 Treinamento/Metodologia de Gestão de Projetos Nidum.md"
+      ],
+      "evidencia": "Estrutura, dissemina e atualiza a metodologia Nidum",
+      "resposta_esperada": "O EGP estrutura, dissemina e atualiza a metodologia, apoia cada fase e monitora; o Comitê Executivo aprova TAP/PGP e abertura/encerramento; governança 'em construção'.",
+      "origem_da_pergunta": "evals/perguntas.json#12"
+    },
+    {
+      "id": "E05",
+      "tipo": "tema",
+      "pergunta": "O que diz o Guia Nidum de Inteligência Híbrida Consciente sobre o uso de IA?",
+      "consulta_palavras": "guia nidum inteligencia hibrida consciente uso de ia",
+      "ouro": [
+        "ACA_GUIA NIDUM DE INTELIGÊNCIA HÍBRIDA CONSCIENTE"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "ACA/ACA_GUIA NIDUM DE INTELIGÊNCIA HÍBRIDA CONSCIENTE.md"
+      ],
+      "evidencia": "Fazer da Inteligência Artificial uma expressão da Intenção Reta",
+      "resposta_esperada": "A IA deve ser expressão da Intenção Reta: a intenção vem antes da inteligência; a Nidum tem uma filosofia de integridade, não de IA.",
+      "origem_da_pergunta": "evals/perguntas.json#13 / banco_perguntas#P7"
+    },
+    {
+      "id": "E06",
+      "tipo": "tema",
+      "pergunta": "Qual o propósito da Nidum?",
+      "consulta_palavras": "proposito nidum missao valores documento fundador",
+      "ouro": [
+        "Nidum Documento Fundador - v30",
+        "Nidum Documento Fundador - v29",
+        "Nidum Documento Fundador Versão 31"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "FONTE/Nidum Documento Fundador - v30.md",
+        "FONTE/Nidum Documento Fundador - v29.md",
+        "FONTE/Nidum Documento Fundador Versão 31.md"
+      ],
+      "evidencia": "O propósito é o porquê e cabe em três palavras encadeadas",
+      "resposta_esperada": "'Fazer da casa um ninho' (Documento Fundador v30).",
+      "origem_da_pergunta": "banco_perguntas#P9"
+    },
+    {
+      "id": "E07",
+      "tipo": "tema",
+      "pergunta": "Quais são os princípios da Política de Sustentabilidade da Nidum?",
+      "consulta_palavras": "politica de sustentabilidade nidum principios regeneracao",
+      "ouro": [
+        "POL-SUS01V1_Política de Sustentabilidade"
+      ],
+      "ouro_minimo": 1,
+      "caminhos": [
+        "Documentos Institucionais/3.2 Políticas Corporativas/POL-SUS01V1_Política de Sustentabilidade.md"
+      ],
+      "evidencia": "Preservar antes de substituir",
+      "resposta_esperada": "Integridade e intenção reta; regeneração; preservar antes de substituir; coautoria e confiança; verdade verificável; justa medida e viabilidade; aprendizagem contínua.",
+      "origem_da_pergunta": "nova"
+    },
+    {
+      "id": "A01",
+      "tipo": "armadilha",
+      "pergunta": "O que diz o Informativo Executivo Nidum 1ª Edição?",
+      "consulta_palavras": "informativo executivo nidum 1a edicao primeira",
+      "ouro": [],
+      "ouro_minimo": 0,
+      "caminhos": [],
+      "evidencia": "",
+      "resposta_esperada": "Não há 1ª edição na base (existem da 3ª à 10ª).",
+      "origem_da_pergunta": "evals/perguntas.json#29"
+    },
+    {
+      "id": "A02",
+      "tipo": "armadilha",
+      "pergunta": "O que o Papel Timbrado da Nidum contém?",
+      "consulta_palavras": "papel timbrado nidum",
+      "ouro": [],
+      "ouro_minimo": 0,
+      "caminhos": [],
+      "evidencia": "",
+      "resposta_esperada": "Não há documento de papel timbrado na base.",
+      "origem_da_pergunta": "evals/perguntas.json#33"
+    },
+    {
+      "id": "A03",
+      "tipo": "armadilha",
+      "pergunta": "O que decidiu a reunião do conselho de 15 de agosto de 2026?",
+      "consulta_palavras": "reuniao conselho 15 agosto 2026 decisoes",
+      "ouro": [],
+      "ouro_minimo": 0,
+      "caminhos": [],
+      "evidencia": "",
+      "resposta_esperada": "Não há ata de reunião do conselho em 15/08/2026.",
+      "origem_da_pergunta": "evals/perguntas.json#34"
+    },
+    {
+      "id": "A04",
+      "tipo": "armadilha",
+      "pergunta": "Quais os assuntos da reunião de coautores de 25/12/2027?",
+      "consulta_palavras": "reuniao coautores 25/12/2027 assuntos",
+      "ouro": [],
+      "ouro_minimo": 0,
+      "caminhos": [],
+      "evidencia": "",
+      "resposta_esperada": "Não existe ata dessa data (futura).",
+      "origem_da_pergunta": "banco_perguntas#P18"
+    },
+    {
+      "id": "A05",
+      "tipo": "armadilha",
+      "pergunta": "O que diz o Documento Fundador v45?",
+      "consulta_palavras": "documento fundador v45 versao 45",
+      "ouro": [],
+      "ouro_minimo": 0,
+      "caminhos": [],
+      "evidencia": "",
+      "resposta_esperada": "Não existe v45; existem v29, v30 e a v31.",
+      "origem_da_pergunta": "banco_perguntas#P19"
+    },
+    {
+      "id": "A06",
+      "tipo": "armadilha",
+      "pergunta": "Qual foi a decisão da reunião sobre a franquia da Nidum na Antártida?",
+      "consulta_palavras": "reuniao franquia nidum antartida decisao",
+      "ouro": [],
+      "ouro_minimo": 0,
+      "caminhos": [],
+      "evidencia": "",
+      "resposta_esperada": "Assunto inexistente na base.",
+      "origem_da_pergunta": "banco_perguntas#P20"
+    }
+  ]
+}

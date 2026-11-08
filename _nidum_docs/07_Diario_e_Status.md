@@ -13,6 +13,24 @@
 
 ---
 
+## 2026-11-07 (noite) — Duas buscas seguidas derrubavam o servidor: teto de threads aplicado (D94)
+
+**Como apareceu:** na primeira rodada da régua de busca (bateria reduzida de 12 perguntas,
+Fase 0 do plano de 07/11), as buscas deram 502 a partir da 2ª ou 3ª. O `/health` também
+caía. No log, `libgomp: Thread creation failed`, o crash de 07/10, agora a cada 1–2 buscas.
+
+**Causa:** reranker rodando nas 13 bases em paralelo, cada execução com um time OpenMP do
+tamanho do host (48), até estourar o teto de threads do container.
+
+**Feito (aprovado pelo Davi):** `OMP_NUM_THREADS`, `OPENBLAS_NUM_THREADS`, `MKL_NUM_THREADS`
+e `NUMEXPR_NUM_THREADS` = 4 no Railway. Depois: 24 buscas em série, 0 quedas, mediana de 69,6 s
+por busca (era 84–92 s).
+
+**Pendente:** latência ainda alta (conserto de raiz no código, Fase 2 / R2); Whisper não
+remedido.
+
+---
+
 ## 2026-11-07 — "Reuniões mais recentes" vinham ao acaso: a busca agora ordena pela data do nome
 
 **Sintoma (produção, 07/11):** *"quais as datas das reuniões mais recentes?"* → o agente

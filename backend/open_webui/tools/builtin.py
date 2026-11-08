@@ -1697,6 +1697,7 @@ async def search_knowledge_files(
     __request__: Request = None,
     __user__: dict = None,
     __model_knowledge__: Optional[list[dict]] = None,
+    __messages__: Optional[list] = None,
 ) -> str:
     """
     Search files by filename across knowledge bases the user has access to.
@@ -1719,6 +1720,7 @@ async def search_knowledge_files(
              id, filename, date, knowledge_id, knowledge_name, updated_at),
              newest date first.
     """
+    _t0_rastro = time.time()
     if __request__ is None:
         return json.dumps({'error': 'Request context not available'})
 
@@ -1846,6 +1848,22 @@ async def search_knowledge_files(
                 '%d of %d matching files shown (newest first). Use skip for older '
                 'ones, or a more specific query.' % (len(pagina), total)
             )
+
+        # NIDUM (07/11/2026) - RASTRO (R3, peca 3). Ver utils/nidum_rastro.py.
+        from open_webui.utils.nidum_rastro import registrar
+
+        registrar(
+            user_id,
+            'search_knowledge_files',
+            'selecionado' if __model_knowledge__ else ('ids' if knowledge_id else 'todas'),
+            sorted({f.get('knowledge_id') for f in all_files if f.get('knowledge_id')}),
+            query,
+            __messages__,
+            [f.get('id') for f in pagina],
+            len(pagina),
+            0,
+            _t0_rastro,
+        )
         return json.dumps(payload, ensure_ascii=False)
     except Exception as e:
         log.exception(f'search_knowledge_files error: {e}')
@@ -2442,6 +2460,7 @@ async def query_knowledge_files(
     __request__: Request = None,
     __user__: dict = None,
     __model_knowledge__: list[dict] = None,
+    __messages__: Optional[list] = None,
 ) -> str:
     """
     Search knowledge base files using semantic/vector search. Searches across collections (KBs),
@@ -2457,6 +2476,8 @@ async def query_knowledge_files(
 
     if not __user__:
         return json.dumps({'error': 'User context not available'})
+
+    _t0_rastro = time.time()
 
     # Coerce parameters from LLM tool calls (may come as strings)
     if isinstance(count, str):
@@ -2621,6 +2642,23 @@ async def query_knowledge_files(
 
         # Limit to requested count
         chunks = chunks[:count]
+
+        # NIDUM (07/11/2026) - RASTRO (R3, peca 3). Content-free: grava ids e
+        # posicoes, nunca texto. Ver utils/nidum_rastro.py.
+        from open_webui.utils.nidum_rastro import registrar
+
+        registrar(
+            user_id,
+            'query_knowledge_files',
+            'selecionado' if __model_knowledge__ else ('ids' if knowledge_ids else 'todas'),
+            collection_names,
+            query,
+            __messages__,
+            [c.get('file_id') or c.get('note_id') for c in chunks],
+            len(chunks),
+            sum(len(c.get('content') or '') for c in chunks),
+            _t0_rastro,
+        )
 
         return json.dumps(chunks, ensure_ascii=False)
     except Exception as e:
