@@ -13,6 +13,25 @@
 
 ---
 
+## 2026-11-08 — Busca por nome no ar (#124); uma regressão minha; primeira medição cega (D95)
+
+**No ar desde 13:22 UTC (merge do #124):** busca de arquivo por palavras, datas e siglas.
+Bateria de 12, depois do deploy: R03 e T01 (os 2 erros de 07/11) **corrigidas**; a L01 melhorou
+(traz os 15 projetos, todos em Iniciação). O servidor não caiu em nenhum momento.
+
+**Regressão causada pelo #124:** a R01 ("reuniões mais recentes") passou a responder 10/09.
+O desempate "nome antes de pasta", posto por causa de "portfólio", empurrou para baixo as atas
+recentes que só têm "Atas" na pasta. Revertido na branch `conserto/busca-nome-ordem-por-data`;
+a ordem volta a ser só a data do nome, que é o contrato da ferramenta. **Até o merge dela, a R01 segue errada em produção.**
+
+**Medição cega (D95):** 15 documentos sorteados, perguntas escritas e nota dada por agentes
+independentes → **15 de 15 certas, 0 inventadas**. O juiz marcou 1 como errada (acesso ao
+ChatND), mas o Davi confirmou que o ChatND estava certo: o guia `TEC_ChatNDGuiaGeral_06-07-2026_v1`
+(SharePoint `Tecnologia/5. Ferramentas/ChatND/`) está vencido. Não cobre perguntas de cruzamento:
+falta o conjunto escrito por alguém da casa.
+
+---
+
 ## 2026-11-07 (noite) — Duas buscas seguidas derrubavam o servidor: teto de threads aplicado (D94)
 
 **Como apareceu:** na primeira rodada da régua de busca (bateria reduzida de 12 perguntas,

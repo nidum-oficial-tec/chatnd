@@ -162,8 +162,16 @@ def main():
     marca = dict((a["filename"], a.get("match_in")) for a in lista)
     check("casou pelo nome -> match_in=name; so pela pasta -> folder",
           marca.get(nome) == "name" and marca.get(pasta) == "folder")
+    # REGRESSAO medida em producao (08/11): com o desempate nome/pasta, "Atas"
+    # punha "MUN_Ata semana passada_10-09-2026" antes das atas de 06/11.
+    antiga = u"MUN > MUN_Ata semana passada_10-09-2026.md"
+    recente = u"Reuni\u00f5es > Atas > PROJ_Acompanhamento Semanal de Projetos_06-11-2026_AUTO.md"
+    lista, _ = busca.filtrar(arquivos([antiga, recente]), "Atas")
+    ordem = nomes_de(datas.ordenar_por_data_do_nome(lista))
+    check("'Atas': a de 06/11 (so na pasta) vem antes da de 10/09 (no nome)", ordem == [recente, antiga])
     corpo_src = io.open(os.path.join(RAIZ, "backend", "open_webui", "tools", "builtin.py"), encoding="utf-8").read()
-    check("a ferramenta poe 'name' antes de 'folder'", "f.get('match_in') == 'folder'" in corpo_src)
+    check("a ferramenta NAO reordena por nome/pasta (a ordem e so a data)",
+          "f.get('match_in') == 'folder'" not in corpo_src)
     lista, modo = busca.filtrar(arquivos(NOMES), "")
     check("consulta vazia -> tudo", modo == "sem_consulta" and len(lista) == len(NOMES))
     lista, modo = busca.filtrar(arquivos(NOMES), "de")
