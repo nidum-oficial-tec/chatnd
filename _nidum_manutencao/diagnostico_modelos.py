@@ -12,7 +12,7 @@ Mostra, para o modelo-base 'claude-opus-4-8' e para o motor
 Serve para confirmar POR QUE da "Model not found" e qual a correcao certa.
 
 USO:
-  cd "C:\\Users\\daviv\\Claude\\Projects\\ChatND\\interface-chatnd"
+  cd "C:\\Users\\daviv\\Dev\\1-nidum\\chatnd\\interface-chatnd"
   $env:NIDUM_URL="https://chatnd.nidumbrasil.com.br"; $env:NIDUM_TOKEN="SEU_TOKEN_ADMIN"
   py _nidum_manutencao/diagnostico_modelos.py
 """
