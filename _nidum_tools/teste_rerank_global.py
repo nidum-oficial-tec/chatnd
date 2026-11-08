@@ -71,6 +71,27 @@ def main():
     treze = [[Doc("b%d-%d" % (i, j), "h%d-%d" % (i, j)) for j in range(96)] for i in range(13)]
     check("13 bases x 96 candidatos, profundidade 12 -> 156 (era ~1.250)", len(g.intercalar(treze, 12, "_chunk_hash")) == 156)
 
+    print("== lotes paralelos ==")
+    pool = list(range(156))
+    partes = g.fatiar(pool, 6)
+    check("156 em 6 lotes de 26", [len(p) for p in partes] == [26] * 6)
+    check("rodizio: nada se perde nem repete", sorted(x for p in partes for x in p) == pool)
+    check("menos itens que lotes: so lotes cheios", g.fatiar([1, 2], 6) == [[1], [2]])
+    check("1 lote = tudo junto", g.fatiar(pool, 1) == [pool])
+    antigo_l = os.environ.pop("NIDUM_RERANK_LOTES", None)
+    try:
+        check("NIDUM_RERANK_LOTES ausente -> 6", g.lotes() == 6)
+        os.environ["NIDUM_RERANK_LOTES"] = "0"
+        check("'0' -> 1 (minimo)", g.lotes() == 1)
+    finally:
+        os.environ.pop("NIDUM_RERANK_LOTES", None)
+        if antigo_l is not None:
+            os.environ["NIDUM_RERANK_LOTES"] = antigo_l
+    d1, d2, d3 = Doc("x"), Doc("y"), Doc("z")
+    d1.metadata["score"], d2.metadata["score"] = 0.2, 0.9
+    check("nota: maior primeiro, sem nota no fim",
+          [d.page_content for d in sorted([d1, d3, d2], key=g.nota, reverse=True)] == ["y", "x", "z"])
+
     print("== cortar ==")
     check("cortar: k melhores por nota", [p[1] for p in g.cortar([(0.1, "x"), (0.9, "y"), (0.5, "z")], 2)] == ["y", "z"])
 
@@ -104,8 +125,11 @@ def main():
           qd.find("if so_candidatos:") < qd.find("compressor = RerankCompressor("))
     check("so_candidatos=False e o padrao (o upstream nao muda)", "so_candidatos: bool = False" in qd)
     glob = src[src.index("async def _nidum_hibrida_rerank_global("):ini]
-    check("o global roda o reranker UMA vez por consulta, sobre o pool intercalado",
-          glob.count("RerankCompressor(") == 1 and "intercalar(listas, prof, CHUNK_HASH_KEY)" in glob)
+    check("o global reranqueia o pool intercalado, em lotes paralelos",
+          glob.count("RerankCompressor(") == 1 and "intercalar(listas, prof, CHUNK_HASH_KEY)" in glob
+          and "fatiar(pool, n_lotes)" in glob and "asyncio.gather(*(_reranquear(l)" in glob)
+    check("... junta os lotes pela nota e corta em k_reranker",
+          "sorted((d for p in partes for d in p), key=nota, reverse=True)[:k_reranker]" in glob)
     check("... e registra no log quantos candidatos e quanto tempo", "nidum_rerank_global: %d bases" in glob)
 
     print()
