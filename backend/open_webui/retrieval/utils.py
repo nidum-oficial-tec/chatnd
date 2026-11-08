@@ -635,9 +635,12 @@ async def _nidum_hibrida_rerank_global(
     intercalados por posicao (ate `prof` por base); reranker UMA vez. Mesmo
     formato de saida de merge_and_sort_query_results. Ver
     utils/nidum_rerank_global.py."""
-    from open_webui.utils.nidum_rerank_global import intercalar
+    from open_webui.utils.nidum_rerank_global import fatiar, intercalar, nota
+    from open_webui.utils.nidum_rerank_global import lotes as _nidum_lotes
 
+    n_lotes = _nidum_lotes()
     t0 = time.time()
+    t_busca = t_rerank = 0.0
     nomes = [n for n in collection_names if collection_results.get(n) is not None]
     results = []
     n_cand = 0
@@ -663,18 +666,29 @@ async def _nidum_hibrida_rerank_global(
                 log.exception(f'nidum_rerank_global: base {name} falhou: {e}')
                 return []
 
+        t_b = time.time()
         listas = await asyncio.gather(*(candidatos(n) for n in nomes))
+        t_busca += time.time() - t_b
         pool = intercalar(listas, prof, CHUNK_HASH_KEY)
         n_cand += len(pool)
         if not pool:
             continue
-        compressor = RerankCompressor(
-            embedding_function=embedding_function,
-            top_n=k_reranker,
-            reranking_function=reranking_function,
-            r_score=r,
-        )
-        docs = await compressor.acompress_documents(pool, query)
+        # Em LOTES PARALELOS, nao numa chamada so: uma chamada usa so as 4 threads
+        # do OMP_NUM_THREADS e ficou tao lenta quanto as 13 do upstream (medido
+        # 08/11, 14:17 UTC). Ver nidum_rerank_global.lotes().
+        async def _reranquear(lote):
+            comp = RerankCompressor(
+                embedding_function=embedding_function,
+                top_n=len(lote),
+                reranking_function=reranking_function,
+                r_score=r,
+            )
+            return await comp.acompress_documents(lote, query)
+
+        t_r = time.time()
+        partes = await asyncio.gather(*(_reranquear(l) for l in fatiar(pool, n_lotes)))
+        t_rerank += time.time() - t_r
+        docs = sorted((d for p in partes for d in p), key=nota, reverse=True)[:k_reranker]
         results.append(
             {
                 'distances': [[d.metadata.get('score') for d in docs]],
@@ -683,8 +697,9 @@ async def _nidum_hibrida_rerank_global(
             }
         )
     log.info(
-        'nidum_rerank_global: %d bases, %d consulta(s), %d candidatos (profundidade %d), %.1f s'
-        % (len(nomes), len(queries), n_cand, prof, time.time() - t0)
+        'nidum_rerank_global: %d bases, %d consulta(s), %d candidatos (profundidade %d, %d lotes), '
+        '%.1f s (busca %.1f s, reranker %.1f s)'
+        % (len(nomes), len(queries), n_cand, prof, n_lotes, time.time() - t0, t_busca, t_rerank)
     )
     return merge_and_sort_query_results(results, k=k)
 

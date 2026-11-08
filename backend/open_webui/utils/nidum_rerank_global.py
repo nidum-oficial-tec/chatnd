@@ -79,6 +79,40 @@ def intercalar(listas, prof, chave_hash=None):
     return saida
 
 
+LOTES_PADRAO = 6
+
+
+def lotes():
+    """NIDUM_RERANK_LOTES: em quantas partes o conjunto vai ao reranker, EM
+    PARALELO. Ausente = LOTES_PADRAO; minimo 1.
+
+    POR QUE (medido em producao em 08/11, 14:17-14:20 UTC): com o reranker numa
+    chamada so, 156 candidatos levaram 54-74 s - o mesmo que os ~1.250 do
+    upstream. O upstream rodava 13 chamadas EM PARALELO (uma por base), cada uma
+    com 4 threads (OMP_NUM_THREADS=4, D94): ~52 threads para 24 vCPU. Uma chamada
+    so usa 4. O trabalho caiu 8x e o paralelismo caiu 13x. Com 6 lotes: 6 x 4 =
+    24 threads = os vCPU do container, abaixo das ~52 que ja rodavam estaveis."""
+    bruto = os.environ.get('NIDUM_RERANK_LOTES')
+    try:
+        return max(int(bruto), 1) if bruto not in (None, '') else LOTES_PADRAO
+    except (ValueError, TypeError):
+        return LOTES_PADRAO
+
+
+def fatiar(itens, n):
+    """Divide em ate n partes de tamanho parecido, distribuindo em rodizio
+    (item 0 na parte 0, item 1 na parte 1...). Partes vazias nao voltam."""
+    n = max(int(n or 1), 1)
+    partes = [list(itens or [])[i::n] for i in range(n)]
+    return [p for p in partes if p]
+
+
+def nota(doc):
+    """Nota do reranker gravada em metadata['score']; sem nota vai para o fim."""
+    s = (getattr(doc, 'metadata', None) or {}).get('score')
+    return s if isinstance(s, (int, float)) else float('-inf')
+
+
 def cortar(pares, k):
     """pares (nota, doc) do reranker -> os k melhores, nota DESC."""
     return sorted(pares, key=lambda p: p[0], reverse=True)[: max(int(k or 0), 0)]
