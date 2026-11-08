@@ -93,13 +93,23 @@ MESES = {
 }
 
 
-def dobrar(texto):
-    """Sem acento, minusculo, tudo que nao e letra/numero vira espaco."""
+def dobrar(texto, separar_juntas=False):
+    """Sem acento, minusculo, tudo que nao e letra/numero vira espaco.
+
+    separar_juntas=True tambem separa palavras GRUDADAS por maiuscula
+    ("CronogramaMVPISerraNegra" -> "cronograma mvpi serra negra"). NIDUM
+    (08/11/2026): medido no conjunto cego de cruzamento - "Serra Negra" nao
+    achava BRA_CronogramaMVPISerraNegra_26_10_19_v1 e o agente respondeu que o
+    cronograma nao existia. O nome e comparado nas DUAS formas (grudada e
+    separada), para "chatnd" continuar casando "ChatND"."""
     if not texto:
         return ''
     t = unicodedata.normalize('NFKD', str(texto))
-    t = ''.join(c for c in t if not unicodedata.combining(c)).casefold()
-    return re.sub(r'[^0-9a-z]+', ' ', t).strip()
+    t = ''.join(c for c in t if not unicodedata.combining(c))
+    if separar_juntas:
+        t = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', t)          # SerraNegra -> Serra Negra
+        t = re.sub(r'(?<=[A-Z])(?=[A-Z][a-z])', ' ', t)     # MVPISerra -> MVPI Serra
+    return re.sub(r'[^0-9a-z]+', ' ', t.casefold()).strip()
 
 
 def radical(palavra):
@@ -195,8 +205,14 @@ def montar(consulta):
     for sigla, nome in _SIGLAS.items():
         por_extenso.setdefault(tuple(nome), []).append(sigla)
     usados = set()
+    # Nome de UMA palavra so vale para os ecossistemas da Governanca ("Academia"
+    # -> ACA, "Marketing" -> MKT). NIDUM (08/11/2026): medido no conjunto cego
+    # de cruzamento - "Academia setembro 2026" achou 3 de 8 atas, so as que tem
+    # "Academia" escrito no nome; as outras sao "ACA_...".
+    eco = {s.lower() for s in SIGLAS_ECOSSISTEMAS}
     for nome, siglas in sorted(por_extenso.items(), key=lambda kv: -len(kv[0])):
-        if len(nome) >= 2 and all(t in termos for t in nome) and not (set(nome) & usados):
+        vale = len(nome) >= 2 or (len(nome) == 1 and any(s in eco for s in siglas))
+        if vale and all(t in termos for t in nome) and not (set(nome) & usados):
             alternativas = [list(nome)] + [[s] for s in sorted(siglas)]
             reqs.append({'tipo': 'palavras', 'alternativas': alternativas})
             usados.update(nome)
@@ -243,13 +259,15 @@ def pontuar(nome, reqs):
     if not reqs:
         return 0
     nd = dobrar(nome)
+    nd_sep = dobrar(nome, separar_juntas=True)
     n = 0
     for r in reqs:
         try:
             if r['tipo'] == 'data':
                 ok = _data_casa(r['data'], nome, nd)
             else:
-                ok = any(all(_termo_casa(t, nd) for t in alt) for alt in r['alternativas'])
+                ok = any(all(_termo_casa(t, nd) or _termo_casa(t, nd_sep) for t in alt)
+                         for alt in r['alternativas'])
         except Exception:
             ok = False
         n += 1 if ok else 0
