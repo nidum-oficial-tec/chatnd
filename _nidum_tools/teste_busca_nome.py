@@ -136,6 +136,29 @@ def main():
     nfd = u"Reunio\u0303es > Atas > Ata Comite\u0302 de Projetos.md"   # Unicode decomposto
     lista, _ = busca.filtrar(arquivos([nfd]), u"comit\u00ea")
     check("nome em Unicode decomposto (NFD) casa", nomes_de(lista) == [nfd])
+    # REGRESSAO medida em producao (08/11, 14:4x): "ata reuniao" (singular) nao
+    # casava a pasta "Reunioes" (plural) - o agente deu 14/10 como a mais recente.
+    lista, _ = busca.filtrar(arquivos(NOMES), u"ata reuni\u00e3o")
+    check("'ata reuniao' (singular) casa 'Reunioes > Atas > ..._06-11-2026'", NOMES[4] in nomes_de(lista))
+    check("'reuniao' casa 'Reuniao' e 'Reunioes'",
+          busca.pontuar(u"Reuni\u00f5es > x.md", busca.montar(u"reuni\u00e3o")) == 1
+          and busca.pontuar(u"Reuni\u00e3o_Acompanhamento.md", busca.montar(u"reuni\u00e3o")) == 1)
+    check("'convocacao' casa 'Convocacoes'",
+          busca.pontuar(u"Convoca\u00e7\u00f5es 2026.md", busca.montar(u"convoca\u00e7\u00e3o")) == 1)
+    # Conjunto cego de cruzamento (08/11): X02 e X05.
+    aca = u"ACA > ACA_Governan\u00e7a e Fluxo de Dados_14-09-2026_AUTO.md"
+    check("'Academia setembro 2026' casa ACA_..._14-09-2026 (sigla de uma palavra)",
+          busca.pontuar(aca, busca.montar("Academia setembro 2026")) == 2)
+    check("'marketing' casa MKT_ (ecossistema de uma palavra)",
+          busca.pontuar(u"MKT > MKT_Converg\u00eancia_11-06-2026.md", busca.montar("marketing")) == 1)
+    serra = u"BRA > BRA_CronogramaMVPISerraNegra_26_10_19_v1.md"
+    check("'Serra Negra' casa 'CronogramaMVPISerraNegra' (palavras grudadas)",
+          busca.pontuar(serra, busca.montar("Serra Negra")) == len(busca.montar("Serra Negra")))
+    check("'cronograma serra negra' tambem", busca.pontuar(serra, busca.montar("cronograma serra negra")) == len(busca.montar("cronograma serra negra")))
+    check("'chatnd' (minusculo) continua casando 'ChatND'",
+          busca.pontuar(u"TEC > TEC_ChatNDGuiaGeral_06-07-2026_v1.md", busca.montar("chatnd")) == 1)
+    check("'guia' casa 'ChatNDGuiaGeral'",
+          busca.pontuar(u"TEC > TEC_ChatNDGuiaGeral_06-07-2026_v1.md", busca.montar("guia")) == 1)
 
     print("== o que NAO pode casar ==")
     check("'ata' nao casa 'plataforma'", busca.pontuar(NOMES[11], busca.montar("ata")) == 0)
