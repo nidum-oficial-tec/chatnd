@@ -13,6 +13,27 @@
 
 ---
 
+## 2026-11-08 (tarde, Davi ausente, plano pré-autorizado) — Reranker global, profundidade 20, perguntas cruzadas (D96)
+
+**No ar:** #125 (ordem por data; a R01 voltou a 06/11). #126 e #127 (reranker uma vez, em 6 lotes),
+com `NIDUM_RERANK_PROFUNDIDADE=20`. A busca caiu de ~70 s para ~31 s (mediana), e a régua ficou melhor
+que a original em todas as medidas (D96). O #126 sozinho piorou e foi desligado em 3 minutos pela variável.
+
+**Medido, sem conserto ainda:**
+- **Perguntas cegas de cruzamento:** 5 certas, 4 parciais, 1 errada, 0 inventadas
+  (`_nidum_avaliacao/resultados/cruzadas_2026-11-08.md`). As listas "todas do mês" perdem itens e o
+  agente as chama de "completas".
+- **Datas e tipos na esteira** (PR chatnd-conhecimento#245, sem merge): as atas têm data em 97%; o
+  problema grande é o tipo (87% caem como "registro").
+
+**Aguardando o Davi:**
+- **PR #128:** três falhas da busca por nome, achadas nas medições de hoje (plural -ão/-ões, "Academia"
+  → ACA, "SerraNegra" grudado).
+- **Carga real da esteira:** a simulação planeja remover 2 arquivos que estão em `Tecnologia/Obsoletos`,
+  não só o guia. Se nada for feito, a rodada automática das 00:00 UTC remove os dois.
+
+---
+
 ## 2026-11-08 — Busca por nome no ar (#124); uma regressão minha; primeira medição cega (D95)
 
 **No ar desde 13:22 UTC (merge do #124):** busca de arquivo por palavras, datas e siglas.
