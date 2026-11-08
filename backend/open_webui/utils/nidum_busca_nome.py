@@ -109,6 +109,12 @@ def radical(palavra):
         return p[:-3]            # reunioes -> reuni (casa reuniao)
     if len(p) > 4 and p.endswith(('aes', 'ais')):
         return p[:-2]            # capitaes -> capita
+    # NIDUM (08/11/2026): singular em -ao tambem vira o radical do plural em
+    # -oes. Medido em producao: o agente buscou "ata reuniao"; "reuniao" nao e
+    # o inicio de "Reunioes" (a pasta das atas), entao as atas de 06/11 em
+    # "Reunioes > Atas" ficaram de fora e ele deu 14/10 como a mais recente.
+    if len(p) > 5 and p.endswith('ao'):
+        return p[:-2]            # reuniao -> reuni (casa reuniao e reunioes)
     if len(p) > 3 and p.endswith('s') and not p.endswith('ss'):
         return p[:-1]            # projetos -> projeto, atas -> ata
     return p

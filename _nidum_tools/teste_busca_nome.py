@@ -136,6 +136,15 @@ def main():
     nfd = u"Reunio\u0303es > Atas > Ata Comite\u0302 de Projetos.md"   # Unicode decomposto
     lista, _ = busca.filtrar(arquivos([nfd]), u"comit\u00ea")
     check("nome em Unicode decomposto (NFD) casa", nomes_de(lista) == [nfd])
+    # REGRESSAO medida em producao (08/11, 14:4x): "ata reuniao" (singular) nao
+    # casava a pasta "Reunioes" (plural) - o agente deu 14/10 como a mais recente.
+    lista, _ = busca.filtrar(arquivos(NOMES), u"ata reuni\u00e3o")
+    check("'ata reuniao' (singular) casa 'Reunioes > Atas > ..._06-11-2026'", NOMES[4] in nomes_de(lista))
+    check("'reuniao' casa 'Reuniao' e 'Reunioes'",
+          busca.pontuar(u"Reuni\u00f5es > x.md", busca.montar(u"reuni\u00e3o")) == 1
+          and busca.pontuar(u"Reuni\u00e3o_Acompanhamento.md", busca.montar(u"reuni\u00e3o")) == 1)
+    check("'convocacao' casa 'Convocacoes'",
+          busca.pontuar(u"Convoca\u00e7\u00f5es 2026.md", busca.montar(u"convoca\u00e7\u00e3o")) == 1)
 
     print("== o que NAO pode casar ==")
     check("'ata' nao casa 'plataforma'", busca.pontuar(NOMES[11], busca.montar("ata")) == 0)
