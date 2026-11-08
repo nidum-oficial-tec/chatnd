@@ -2651,10 +2651,15 @@ async def query_knowledge_files(
 
         # Query vector collections if any
         if collection_names:
+            # NIDUM (08/11/2026, etapa A): a pergunta do usuario entra na busca
+            # JUNTO com a consulta que o agente escreveu. Ver
+            # utils/nidum_pergunta_original.py (evidencia e quando nao entra).
+            from open_webui.utils.nidum_pergunta_original import consultas_da_busca
+
             query_results = await query_collection(
                 __request__,
                 collection_names=collection_names,
-                queries=[query],
+                queries=consultas_da_busca(query, __messages__),
                 embedding_function=embedding_function,
                 k=count,
             )
