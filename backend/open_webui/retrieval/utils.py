@@ -349,7 +349,12 @@ async def query_doc_with_hybrid_search(
     r: float,
     hybrid_bm25_weight: float,
     enable_enriched_texts: bool = False,
+    so_candidatos: bool = False,
 ) -> dict:
+    # NIDUM (08/11/2026): so_candidatos=True devolve a LISTA de documentos da
+    # busca hibrida (BM25 + vetor, RRF) na ordem, SEM reranker - o reranker roda
+    # uma vez, sobre todas as bases, em query_collection_with_hybrid_search.
+    # Ver utils/nidum_rerank_global.py. Com False, nada muda.
     try:
         # First check if collection_result has the required attributes
         if (
@@ -358,7 +363,7 @@ async def query_doc_with_hybrid_search(
             or not hasattr(collection_result, 'metadatas')
         ):
             log.warning(f'query_doc_with_hybrid_search:no_docs {collection_name}')
-            return {'documents': [], 'metadatas': [], 'distances': []}
+            return [] if so_candidatos else {'documents': [], 'metadatas': [], 'distances': []}
 
         # Now safely check the documents content after confirming attributes exist
         if (
@@ -367,7 +372,7 @@ async def query_doc_with_hybrid_search(
             or not collection_result.documents[0]
         ):
             log.warning(f'query_doc_with_hybrid_search:no_docs {collection_name}')
-            return {'documents': [], 'metadatas': [], 'distances': []}
+            return [] if so_candidatos else {'documents': [], 'metadatas': [], 'distances': []}
 
         log.debug(f'query_doc_with_hybrid_search:doc {collection_name}')
 
@@ -410,6 +415,9 @@ async def query_doc_with_hybrid_search(
                 weights=[hybrid_bm25_weight, 1.0 - hybrid_bm25_weight],
                 id_key=CHUNK_HASH_KEY,
             )
+
+        if so_candidatos:
+            return await ensemble_retriever.ainvoke(query)
 
         compressor = RerankCompressor(
             embedding_function=embedding_function,
@@ -610,6 +618,77 @@ async def query_collection(
     return merge_and_sort_query_results(results, k=k)
 
 
+async def _nidum_hibrida_rerank_global(
+    collection_results: dict,
+    collection_names: list[str],
+    queries: list[str],
+    embedding_function,
+    k: int,
+    reranking_function,
+    k_reranker: int,
+    r: float,
+    hybrid_bm25_weight: float,
+    enable_enriched_texts: bool,
+    prof: int,
+) -> dict:
+    """NIDUM (08/11/2026). Busca hibrida por base SEM reranker; candidatos
+    intercalados por posicao (ate `prof` por base); reranker UMA vez. Mesmo
+    formato de saida de merge_and_sort_query_results. Ver
+    utils/nidum_rerank_global.py."""
+    from open_webui.utils.nidum_rerank_global import intercalar
+
+    t0 = time.time()
+    nomes = [n for n in collection_names if collection_results.get(n) is not None]
+    results = []
+    n_cand = 0
+    for query in queries:
+
+        async def candidatos(name):
+            try:
+                docs = await query_doc_with_hybrid_search(
+                    collection_name=name,
+                    collection_result=collection_results[name],
+                    query=query,
+                    embedding_function=embedding_function,
+                    k=k,
+                    reranking_function=reranking_function,
+                    k_reranker=k_reranker,
+                    r=r,
+                    hybrid_bm25_weight=hybrid_bm25_weight,
+                    enable_enriched_texts=enable_enriched_texts,
+                    so_candidatos=True,
+                )
+                return docs if isinstance(docs, list) else []
+            except Exception as e:
+                log.exception(f'nidum_rerank_global: base {name} falhou: {e}')
+                return []
+
+        listas = await asyncio.gather(*(candidatos(n) for n in nomes))
+        pool = intercalar(listas, prof, CHUNK_HASH_KEY)
+        n_cand += len(pool)
+        if not pool:
+            continue
+        compressor = RerankCompressor(
+            embedding_function=embedding_function,
+            top_n=k_reranker,
+            reranking_function=reranking_function,
+            r_score=r,
+        )
+        docs = await compressor.acompress_documents(pool, query)
+        results.append(
+            {
+                'distances': [[d.metadata.get('score') for d in docs]],
+                'documents': [[d.page_content for d in docs]],
+                'metadatas': [[d.metadata for d in docs]],
+            }
+        )
+    log.info(
+        'nidum_rerank_global: %d bases, %d consulta(s), %d candidatos (profundidade %d), %.1f s'
+        % (len(nomes), len(queries), n_cand, prof, time.time() - t0)
+    )
+    return merge_and_sort_query_results(results, k=k)
+
+
 async def query_collection_with_hybrid_search(
     collection_names: list[str],
     queries: list[str],
@@ -643,6 +722,31 @@ async def query_collection_with_hybrid_search(
     collection_results = dict(await asyncio.gather(*(_fetch_collection(name) for name in collection_names)))
 
     log.info(f'Starting hybrid search for {len(queries)} queries in {len(collection_names)} collections...')
+
+    # NIDUM (08/11/2026) - reranker UMA vez sobre os candidatos de todas as
+    # bases, em vez de uma vez por base. Medido: 67,9 s -> o custo era o
+    # reranker (~1.250 pares por busca em 13 bases). Desligar sem mudar codigo:
+    # NIDUM_RERANK_PROFUNDIDADE=0. Se der erro, cai no caminho do upstream.
+    from open_webui.utils.nidum_rerank_global import profundidade as _nidum_prof
+
+    _prof = _nidum_prof()
+    if _prof > 0:
+        try:
+            return await _nidum_hibrida_rerank_global(
+                collection_results=collection_results,
+                collection_names=collection_names,
+                queries=queries,
+                embedding_function=embedding_function,
+                k=k,
+                reranking_function=reranking_function,
+                k_reranker=k_reranker,
+                r=r,
+                hybrid_bm25_weight=hybrid_bm25_weight,
+                enable_enriched_texts=enable_enriched_texts,
+                prof=_prof,
+            )
+        except Exception as e:
+            log.exception(f'nidum_rerank_global falhou, usando o caminho por base: {e}')
 
     async def process_query(collection_name, query):
         try:
