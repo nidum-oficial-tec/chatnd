@@ -1,0 +1,145 @@
+{
+  "itens": [
+    {
+      "id": "X01",
+      "grupo": "grupo01.txt",
+      "tipo_grupo": "todas_do_mes",
+      "usavel": true,
+      "pergunta": "Quais reuniões o ecossistema Comunidades Vivas (CVI) teve em setembro de 2026? Liste todas com a data e o assunto de cada uma.",
+      "resposta_esperada": "Cinco reuniões CVI em setembro/2026: 01/09 — Estudo de mão de obra para retrofit (mapa preliminar de competências por tipo de intervenção); 09/09 — Certificações ambientais para retrofit (LEED, GBC, Edge, Fitwell, PBE Edifica); 11/09 — Retrofit do prédio da Oscar Freire (cédula de originação, automação da vistoria, tese de investimento); 14/09 — Capacitação de mão de obra para retrofit (visita ao Instituto da Construção, núcleo comum de competências); 18/09 — Retrofit de prédios no centro de SP (catálogo de imóveis, programa Requalifica Centro / subvenção da Prefeitura com prazo em 13/10).",
+      "ouro": [
+        "CVI_Retrofit de Prédios no Centro_18-09-2026_AUTO.md",
+        "CVI_Capacitação de Mão de Obra Retrofit_14-09-2026_AUTO.md",
+        "CVI_Retrofit Prédio Oscar Freire_11-09-2026_AUTO.md",
+        "CVI_Certificações Ambientais para Retrofit_09-09-2026_AUTO.md",
+        "CVI_Estudo de Mão de Obra para Retrofit_01-09-2026.md"
+      ],
+      "como_conferir": "A resposta deve listar as cinco reuniões (01, 09, 11, 14 e 18/09) com o assunto correto de cada uma, sem omitir nenhuma nem incluir reuniões de outro mês ou ecossistema."
+    },
+    {
+      "id": "X02",
+      "grupo": "grupo02.txt",
+      "tipo_grupo": "todas_do_mes",
+      "usavel": true,
+      "pergunta": "Quais reuniões a Academia teve em setembro de 2026? Quero a lista completa, com data e assunto.",
+      "resposta_esperada": "Oito reuniões da Academia em setembro/2026: 02/09 — Diretrizes de ambientação de fornecedores; 03/09 — Cronograma e riscos do projeto; 09/09 — Reunião semanal de Gestão do Conhecimento (mapeamento de competências inspirado no case 3M); 14/09 — Governança e fluxo de dados (espinha dorsal de processos / esteira do ativo); 23/09 — Reunião semanal da Academia (página da Academia no SharePoint, formulário dos coautores, ambientação de fornecedores); 24/09 — Ferramentas de IA e aulas introdutórias; 28/09 — Plataforma de gestão da Academia (botões da Conexão Academia e migração do SharePoint para a plataforma); 30/09 — Reunião semanal da Academia (reestruturação dos botões de acesso por causa do recurso 'Fale com' da nova intranet).",
+      "ouro": [
+        "ACA_Reunião Semanal Academia_30-09-2026_AUTO.md",
+        "ACA_Plataforma de Gestão da Academia_28-09-2026_AUTO.md",
+        "ACA_Ferramentas de IA e Aulas Introdutórias_24-09-2026_AUTO.md",
+        "ACA_Reunião Semanal Academia_23-09-2026_AUTO.md",
+        "ACA_Governança e Fluxo de Dados_14-09-2026_AUTO.md",
+        "ACA_Reunião Semanal Gestão do Conhecimento_09-09-2026.md",
+        "ACA_Cronograma e Riscos do Projeto_03-09-2026_AUTO.md",
+        "ACA_Diretrizes de Ambientação de Fornecedores_02-09-2026_AUTO.md"
+      ],
+      "como_conferir": "A resposta deve trazer as oito reuniões (02, 03, 09, 14, 23, 24, 28 e 30/09), distinguindo as duas reuniões semanais de 23 e 30/09, sem omitir as de 02 e 03/09."
+    },
+    {
+      "id": "X03",
+      "grupo": "grupo03.txt",
+      "tipo_grupo": "todas_do_mes",
+      "usavel": true,
+      "pergunta": "Que reuniões de Operações aconteceram em outubro de 2026 e o que foi tratado em cada uma?",
+      "resposta_esperada": "Três reuniões de Operações em outubro/2026: 06/10 — Plano de implantação BIM (MAPs/BEPs por disciplina, template Revit, padronização de códigos e famílias, licenças para o CDE, subvenção de retrofit da prefeitura); 07/10 — Documentação e due diligence de ativos (Meraki/Florianópolis, Artefacto/Itajaí, Jardins e Virgínia/SP, Serra Negra/Londrina: levantamento documental, laudos de avaliação, contratação de modelagem 3D, checklist condominial); 21/10 — Reunião semanal de operações (preparação da apresentação ao cliente interessado no imóvel de Ipanema: tour 360°, modelagem Revit/BIM, gêmeo digital, precificação diante do orçamento de R$ 2,2–2,5 milhões).",
+      "ouro": [
+        "OPE_Reunião semanal de operações_21-10-2026_AUTO.md",
+        "OPE_Documentação e Due Diligence de Ativos_07-10-2026_AUTO.md",
+        "OPE_Plano de Implantação BIM_06-10-2026_AUTO.md"
+      ],
+      "como_conferir": "A resposta deve citar as três reuniões (06, 07 e 21/10) com o assunto certo de cada uma, sem trazer reuniões de setembro ou novembro."
+    },
+    {
+      "id": "X04",
+      "grupo": "grupo04.txt",
+      "tipo_grupo": "todas_do_mes",
+      "usavel": true,
+      "pergunta": "Quais reuniões gerenciais foram registradas em julho de 2026? Me passa data e tema de cada uma.",
+      "resposta_esperada": "Três registros gerenciais (GER) em julho/2026: 02/07 — Convergência (reunião de coautores 'A Anatomia da Integridade' / Convergência da Inteligência Híbrida, sobre o organismo Nidum e seus órgãos); 27/07 — Reunião semanal gerencial (status dos produtos: MVP de apartamento, Comunidades Vivas, Fazendas, Nidum Mundo, Nidum Brasil, índice/laudo com a Dash City, proposta da Nidum Prumo); 31/07 — Modelos de captação (captação digital/Laudo Plus, corretor parceiro x concierge interno, modelos turnkey/corretor/intermediador/proprietário).",
+      "ouro": [
+        "GER_Modelos de Captação_31-07-2026.md",
+        "GER_Reunião Semanal Gerencial_27-07-2026.md",
+        "GER_Convergência_02-07-2026.md"
+      ],
+      "como_conferir": "A resposta deve listar os três registros (02, 27 e 31/07) com o tema correto, incluindo o documento de Convergência de 02/07, que não tem formato de ata comum."
+    },
+    {
+      "id": "X05",
+      "grupo": "grupo05.txt",
+      "tipo_grupo": "versao_mais_recente",
+      "usavel": true,
+      "pergunta": "Qual é o cronograma mais atualizado do MVP de Serra Negra e em que pé está a contratação dos avaliadores do imóvel?",
+      "resposta_esperada": "A versão mais recente é a de 19/10/2026 (v1). Nela, a solicitação de propostas de avaliadores foi concluída (realizada de 30/09 a 08/10); a aprovação das propostas de avaliadores (EGP/CT) está em andamento, de 19 a 21/10; a contratação dos 2 avaliadores selecionados está marcada para 22/10; e a execução da avaliação com dois avaliadores teve início realizado em 23/10. O projeto segue com término em 26/11/2026. (Na versão anterior, de 05/10, a solicitação de propostas ainda aparecia 'em andamento' e não existiam as etapas de aprovação e contratação.)",
+      "ouro": [
+        "BRA_CronogramaMVPISerraNegra_26_10_19_v1.md"
+      ],
+      "como_conferir": "A resposta deve apontar o cronograma de 19/10/2026 e dizer que a solicitação de propostas foi concluída e a aprovação está em andamento (19–21/10), com contratação em 22/10; responder 'solicitação em andamento' indica que usou a versão de 05/10."
+    },
+    {
+      "id": "X06",
+      "grupo": "grupo06.txt",
+      "tipo_grupo": "versao_mais_recente",
+      "usavel": true,
+      "pergunta": "Qual é a versão mais recente do cronograma da Fazenda Fortaleza e como estão as fases de Base Técnica e Jurídica e de Ponto de integridade da área?",
+      "resposta_esperada": "A versão mais recente é a de 08/10/2026 (v9), na pasta do EGP (Portfólio de Projetos). Nela, a fase Base Técnica e Jurídica está 100% concluída no prazo (10/07 a 22/07/2026, com o marco M01 em 22/07), e as atividades da fase Ponto de integridade da área (leitura automatizada, análise de vocação v1, validação em CT, equipe multidisciplinar, responsáveis, Eixo 1 — História) aparecem concluídas no prazo entre 23/07 e 14/08.",
+      "ouro": [
+        "FAZ_Cronograma_26_10_08_v9.md"
+      ],
+      "como_conferir": "O ponto decisivo é identificar a versão de 08/10/2026 (v9), e não a de 01/10 (v1) nem as de setembro; atenção: os fatos de status no trecho disponível são iguais nas duas versões mais novas, então a conferência se apoia na data/versão citada."
+    },
+    {
+      "id": "X07",
+      "grupo": "grupo07.txt",
+      "tipo_grupo": "versao_mais_recente",
+      "usavel": true,
+      "pergunta": "Qual é o cronograma mais atual do MVP Jardins e quando está previsto o término do projeto? E o Gate 1 de qualificação jurídica?",
+      "resposta_esperada": "A versão mais recente é a de 28/10/2026 (v1), na pasta do projeto SP-001 Jardins. O término previsto do projeto (Nidum Digital - MVP) é 20/11/2026; o Gate 1 — Qualificação Jurídica e Adesão concluída está previsto para 16/10/2026. A due diligence intermediária (08/09–25/09) consta em andamento e o contrato de adesão/não venda aguarda reunião do comitê técnico, comitê executivo e jurídico.",
+      "ouro": [
+        "BRA_CronogramaMVPJardins_26_10_28_v1.md"
+      ],
+      "como_conferir": "O ponto decisivo é citar a versão de 28/10/2026 (e não a de 14/10, 23/09 ou 02/09) e o término em 20/11/2026; atenção: datas de término e Gate 1 são iguais na versão de 14/10, então a conferência se apoia na versão citada."
+    },
+    {
+      "id": "X08",
+      "grupo": "grupo08.txt",
+      "tipo_grupo": "cruzar_documentos",
+      "usavel": true,
+      "pergunta": "No apartamento de Ipanema, qual era o pé-direito que o modelo assumia e quanto o laser mediu de verdade? E, com os números corrigidos, qual é o veredito de entrada do relatório BIM?",
+      "resposta_esperada": "O laudo de discrepâncias modelo x laser mostrou que o modelo (malha do iPhone) assumia pé-direito de 2,80 m uniforme, enquanto o laser mediu 2,44–2,46 m (dominante 2,45 m, com rebaixos de 2,26 e 2,37 m) — diferença de ~35 cm; a superfície de parede no QTO cai cerca de 12,5% (459 para ~400 m²). O relatório BIM (V2 / versão clean), já com pé-direito 2,45 m e área oficial de 76,00 m², dá NO para entrada a R$ 1,20 M com reforma total; o caminho ao GO é o restauro calibrado (≤ R$ 2.000/m²), que fecha pleno com entrada ≤ R$ 1,097 M; a R$ 1,10 M o GO é condicionado (2ª via do avaliador). Saída reformado de referência: R$ 1,60 M.",
+      "ouro": [
+        "Laudo Discrepâncias Modelo x Laser - RTF-001-Ipanema - v1.md",
+        "Versão Clean - Relatório BIM - RTF-001-Ipanema.md",
+        "Relatório BIM - RTF-001-Ipanema_Apto_Rio de Janeiro - V2.md"
+      ],
+      "como_conferir": "A resposta precisa trazer o contraste 2,80 m (modelo) x 2,45 m (laser), vindo do laudo de discrepâncias, e o veredito do relatório BIM (NO a R$ 1,20 M com reforma total; GO via restauro calibrado com entrada até R$ 1,097 M)."
+    },
+    {
+      "id": "X09",
+      "grupo": "grupo09.txt",
+      "tipo_grupo": "cruzar_documentos",
+      "usavel": true,
+      "pergunta": "Para o apartamento de Serra Negra, em Londrina, quais propostas de avaliação imobiliária foram recebidas (valor e prazo de cada uma)? E qual é o preço pedido pelo imóvel segundo o relatório BIM: dá para fechar só com retrofit?",
+      "resposta_esperada": "Duas propostas de avaliação mercadológica (NBR 14653, com ART), ambas de 07/10/2026: uma de R$ 1.100,00 (12 h de trabalho, prazo de 10 dias úteis, 50% na contratação e 50% na entrega) e outra de R$ 1.500,00 (prazo de 15 dias úteis, 50% de sinal e 50% na entrega, via PIX). O relatório BIM (versão clean, RTF-007) indica pedido de R$ 0,70 M (≈ R$ 5.224/m², 134 m² privativos e 208 m² totais) e conclui que o retrofit puro NÃO fecha ao pedido (teto local de R$ 0,33–0,38 M); a tese é a criação de área / projeto de expansão, e o laudo local é apontado como âncora de saída a destravar.",
+      "ouro": [
+        "Proposta_Avaliacao_Imobiliaria_Raul_Bueno_R%241.100_12h_assinado.md",
+        "Proposta_Avaliacao_Apto_52_Serra_Negra_29_assinado.md",
+        "Versão Clean - Relatório BIM - RTF-007-Serra Negra.md"
+      ],
+      "como_conferir": "A resposta deve trazer as duas propostas (R$ 1.100 / 10 dias úteis e R$ 1.500 / 15 dias úteis) e, do relatório BIM, o pedido de R$ 0,70 M e que o retrofit puro não fecha (teto R$ 0,33–0,38 M); a proposta de modelagem BIM de R$ 3.100 não é avaliação e não deve ser contada como tal."
+    },
+    {
+      "id": "X10",
+      "grupo": "grupo10.txt",
+      "tipo_grupo": "cruzar_documentos",
+      "usavel": true,
+      "pergunta": "No apartamento 503 do Meraki, em Florianópolis, quanto custou a modelagem BIM da unidade e qual área o contrato considerou? Isso bate com a área do laudo? E quais incompatibilidades a modelagem encontrou nos projetos?",
+      "resposta_esperada": "O contrato de modelagem BIM (LOD 300, RVT + IFC) cobre duas unidades por R$ 3.000,00 no total, sendo R$ 1.800,00 para o Meraki Sunset 503 (e R$ 1.200,00 para o Artefacto 1501), com entrega em até 15 dias úteis; o contrato considera área aproximada de 190 m² para o Meraki. O laudo (R5, 02/10/2026) registra área privativa declarada de 186,690 m², com divergência para a planta tipo de 180,57 m² ainda a reconciliar — ou seja, não bate exatamente. O relatório de incompatibilidade aponta: (1) guarda-corpo/floreira — planta estrutural com 35 cm acima da laje (51 cm com a laje) x 50 cm no detalhamento; (2) altura das portas da sacada/área técnica desalinhada com as janelas (peitoril a 1,68 m); (3) altura da porta de 6 folhas da varanda incompatível com a viga; (4) bancadas não são entregues pelo empreendimento, mas foram modeladas de forma representativa.",
+      "ouro": [
+        "Contrato_NIDUM_-_Modelagem_BIM_Artefacto_e_Meraki_Tais_Vicente_assinado.md",
+        "NID-LAUDO-20261002-FLN-JP-MERAKI-503-R5 (1).md",
+        "Meraki - Relatório de Incompatibilidade.md"
+      ],
+      "como_conferir": "A resposta deve trazer R$ 1.800 (de R$ 3.000 no total) e ~190 m² do contrato, a área de 186,69 m² do laudo (com a divergência para 180,57 m²) e pelo menos as incompatibilidades do guarda-corpo e das alturas de portas do relatório de incompatibilidade."
+    }
+  ]
+}
