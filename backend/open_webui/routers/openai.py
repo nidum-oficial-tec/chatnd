@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import os
 import re
 from typing import Optional
 from urllib.parse import quote, urlparse
@@ -1193,6 +1194,19 @@ async def generate_chat_completion(
             request_url = f'{url}/responses'
         else:
             request_url = f'{url}/chat/completions'
+            # NIDUM (08/11/2026) - CUSTO. O middleware ja le 'usage' do stream
+            # (utils/middleware.py, normalize_usage), mas o provedor OpenAI-compat
+            # so manda o consumo quando a requisicao pede include_usage - e o
+            # upstream so pede para o Azure. Resultado medido: o Opus via camada
+            # compativel da Anthropic chegava com usage = {} e o custo do ChatND
+            # nao era mensuravel. Opt-in por variavel: se um provedor recusar o
+            # parametro, NIDUM_INCLUDE_USAGE=0 volta ao comportamento antigo.
+            if (
+                os.environ.get('NIDUM_INCLUDE_USAGE', '0').strip() == '1'
+                and payload.get('stream')
+                and 'stream_options' not in payload
+            ):
+                payload['stream_options'] = {'include_usage': True}
     # For Chat Completions, strip image parts from multimodal tool messages
     # (Chat Completions doesn't support images in tool content).
     if not is_responses and 'messages' in payload:
