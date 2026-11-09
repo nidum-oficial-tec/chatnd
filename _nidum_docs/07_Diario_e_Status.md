@@ -13,6 +13,15 @@
 
 ---
 
+## 2026-11-09 — GPT-5.1 medido como respondedor; fica o Opus 5.5 (D99)
+
+- **Usuário comum confirmado** (Davi): o ChatND abre e responde. O `gpt-5-mini` foi ocultado e o `chatnd` virou o padrão. O `chatnd-agente-beta` foi desativado; nada depende dele.
+- **GPT-5.1 contra Opus 5.5** (31 perguntas da casa, juiz Claude): 19/6/2 com 3 inventadas, contra 27/3/1 com 0 inventadas. O GPT respondeu 4 perguntas sem buscar. Fica o Opus.
+- **Sem meta de tempo:** a qualidade vem primeiro.
+- **Prévia das fichas** e **planilha de divergências** no OneDrive (pasta do ChatND), para o Davi.
+
+---
+
 ## 2026-11-08/09 (madrugada) — Etapa C sem reindexar, custo, Opus 5.5, auditoria definitiva (D98)
 
 - **Freio da esteira liberado** (decisão do Davi): 16 de 16 remoções aplicadas; a issue #243 fechou.
