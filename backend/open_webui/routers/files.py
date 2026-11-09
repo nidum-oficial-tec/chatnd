@@ -875,6 +875,46 @@ async def rename_file_by_id(
 
 
 ############################
+# NIDUM: metadado do documento (data, tipo, projeto)
+############################
+
+
+class NidumMetaForm(BaseModel):
+    nidum: dict
+
+
+@router.post('/{id}/nidum-meta')
+async def set_nidum_meta_by_id(
+    id: str,
+    form_data: NidumMetaForm,
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """NIDUM (08/11/2026, etapa C). Grava meta['nidum'] (data_documento, tipo_doc,
+    projeto - derivados pela esteira, _scripts/metadados_documento.py) SEM tocar
+    em mais nada.
+
+    POR QUE NAO Files.update_file_metadata_by_id: ela tambem muda updated_at, que
+    e o desempate da ordem da busca e que a esteira mantem certo de proposito
+    (workflow acertar_datas). E POR QUE NAO o campo 'metadata' do upload: ele vai
+    para meta['data'], onde a esteira guarda o hash. Chave propria, nada mais muda.
+    Admin only: e operacao de manutencao da base, nao de usuario."""
+    from sqlalchemy import select
+
+    from open_webui.models.files import File
+
+    result = await db.execute(select(File).filter_by(id=id))
+    file = result.scalars().first()
+    if not file:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    meta = dict(file.meta or {})
+    meta['nidum'] = form_data.nidum
+    file.meta = meta  # dict novo: o SQLAlchemy so detecta mudanca em JSON por atribuicao
+    await db.commit()
+    return {'id': id, 'nidum': form_data.nidum}
+
+
+############################
 # Delete File By Id
 ############################
 

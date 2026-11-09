@@ -296,7 +296,7 @@ def filtrar(arquivos, consulta):
         alvo = dobrar(consulta)
         return [a for a in arquivos or [] if alvo in dobrar(a.get('filename', ''))], 'trecho'
     total = len(reqs)
-    pontos = [(pontuar(a.get('filename', ''), reqs), a) for a in arquivos or []]
+    pontos = [(pontuar(_texto(a), reqs), a) for a in arquivos or []]
     todas = []
     for p, a in pontos:
         if p == total:
@@ -322,6 +322,21 @@ def filtrar(arquivos, consulta):
             item['match_score'] = '%d/%d' % (p, total)
             parcial.append(item)
     return parcial, 'parcial'
+
+
+def _texto(a):
+    """Nome do arquivo + tipo e projeto do metadado da esteira (etapa C,
+    08/11/2026): "cronograma" acha o que a esteira classificou como cronograma
+    mesmo sem a palavra no nome; "RJ-001" acha os documentos do projeto."""
+    nid = (a or {}).get('nidum') or {}
+    extra = ' '.join(x for x in (nid.get('tipo_doc'), nid.get('projeto')) if isinstance(x, str) and x)
+    nome = (a or {}).get('filename', '') or ''
+    # data do metadado SO quando o nome nao tem data (senao ela, por vir depois,
+    # passaria na frente da data do nome em data_do_nome, que pega a ultima)
+    dd = nid.get('data_documento')
+    if isinstance(dd, str) and len(dd) == 10 and not data_do_nome(nome):
+        extra = (extra + ' ' if extra else '') + '%s-%s-%s' % (dd[8:10], dd[5:7], dd[0:4])
+    return nome + ((' > ' + extra) if extra else '')
 
 
 def _proprio(nome):

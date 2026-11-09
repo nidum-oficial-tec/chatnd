@@ -1669,7 +1669,7 @@ async def _nidum_arquivos_das_bases(bases: dict, query: str) -> list[dict]:
 
     async with get_async_db_context() as db:
         stmt = (
-            select(File.id, File.filename, File.updated_at, KnowledgeFile.knowledge_id)
+            select(File.id, File.filename, File.updated_at, KnowledgeFile.knowledge_id, File.meta)
             .join(KnowledgeFile, File.id == KnowledgeFile.file_id)
             .filter(KnowledgeFile.knowledge_id.in_(list(bases.keys())))
         )
@@ -1687,8 +1687,11 @@ async def _nidum_arquivos_das_bases(bases: dict, query: str) -> list[dict]:
             'knowledge_id': kb_id,
             'knowledge_name': bases.get(kb_id, ''),
             'updated_at': updated_at,
+            # NIDUM (08/11/2026, etapa C): data/tipo/projeto gravados pela esteira
+            # (POST /api/v1/files/{id}/nidum-meta). Vazio para arquivo sem metadado.
+            'nidum': ((meta or {}).get('nidum') or {}) if isinstance(meta, dict) else {},
         }
-        for file_id, filename, updated_at, kb_id in rows
+        for file_id, filename, updated_at, kb_id, meta in rows
     ]
 
 
