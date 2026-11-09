@@ -16,7 +16,7 @@ import html, io, json, os, re, sys, time, urllib.request
 
 RAIZ = r"C:\Users\daviv\Dev\1-nidum\chatnd\interface-chatnd"
 URL = "https://chatnd.nidumbrasil.com.br"
-MODELO = "chatnd"
+MODELO = os.environ.get("AGENTE_MODELO", "chatnd")  # outro preset para comparacao (ex.: chatnd-teste-gpt)
 IDS = "L01,L02,L04,R01,R03,R06,T01,T02,F02,F09,E03,A03".split(",")
 SAIDA = sys.argv[1]
 PERGUNTAS = sys.argv[2] if len(sys.argv) > 2 else None
