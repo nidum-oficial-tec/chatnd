@@ -13,6 +13,16 @@
 
 ---
 
+## 2026-11-08 (noite) — #128 no ar, prompt de listas, etapa A medida e desligada, auditor GPT (D97)
+
+- **#128** (plural -ão, ecossistema de uma palavra, palavras grudadas): no ar às 22:48 UTC. A R01 passou a listar as 5 atas de 06/11.
+- **Prompt do agente** (D97): regra de listas e "mais recente". Nas cruzadas, juiz Claude de 7/2/1 para 9/1/0; "lista completa" falsa de 3 para 0.
+- **Etapa A** (#130): no ar às ~23:33 UTC; sem ganho e ~30% mais lenta; **desligada** por `NIDUM_PERGUNTA_ORIGINAL=0`.
+- **Auditor GPT** (`_nidum_avaliacao/auditar.py`): concorda com o juiz Claude em 11 de 15 nas cegas, depois de receber os documentos que o ChatND abriu. Nas cruzadas concorda pouco: é mais rígido com "assunto só pelo título".
+- **Esteira:** o guia vencido e o registro técnico saíram da base. O freio da issue #243 (16 remoções retidas desde 07/11) aguarda o Davi. Etapa C, passo 1, no PR chatnd-conhecimento#246.
+
+---
+
 ## 2026-11-08 (tarde, Davi ausente, plano pré-autorizado) — Reranker global, profundidade 20, perguntas cruzadas (D96)
 
 **No ar:** #125 (ordem por data; a R01 voltou a 06/11). #126 e #127 (reranker uma vez, em 6 lotes),
