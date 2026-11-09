@@ -115,6 +115,17 @@ def data_do_nome(nome):
     return achados[-1][1]
 
 
+def _data_do_metadado(item):
+    """NIDUM (08/11/2026, etapa C): data_documento que a esteira derivou (do nome
+    ou do conteudo, so com regras medidas como confiaveis) e gravou em
+    meta['nidum']. Usada SO quando o nome nao tem data."""
+    try:
+        v = ((item or {}).get('nidum') or {}).get('data_documento')
+        return date.fromisoformat(v) if v else None
+    except (ValueError, TypeError, AttributeError):
+        return None
+
+
 def ordenar_por_data_do_nome(arquivos):
     """Ordena dicts {'filename', 'updated_at', ...}: data do nome DESC, sem data
     no fim, empate por updated_at DESC. Acrescenta 'date' (aaaa-mm-dd) em cada
@@ -123,7 +134,7 @@ def ordenar_por_data_do_nome(arquivos):
     saida = []
     for a in arquivos or []:
         item = dict(a)
-        d = data_do_nome(item.get('filename'))
+        d = data_do_nome(item.get('filename')) or _data_do_metadado(item)
         if d:
             item['date'] = d.isoformat()
         saida.append((d, item))
