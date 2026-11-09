@@ -39,13 +39,20 @@ def api(c, d=None):
         return json.loads(r.read().decode("utf-8"))
 
 
+# As ferramentas do PRESET, lidas uma vez - as mesmas que a interface manda.
+TOOL_IDS = (api("/api/v1/models/model?id=" + MODELO).get("meta") or {}).get("toolIds") or []
+
+
 def um(item):
     t0 = time.time()
     chat = api("/api/v1/chats/new", {"chat": {"title": "medicao regua %s" % item["id"], "models": [MODELO],
                                               "messages": [], "history": {"messages": {}, "currentId": None}}})
     cid, mid = chat["id"], "msg-regua-%s-%d" % (item["id"], int(time.time()))
+    # tool_ids no CORPO (D88, porta 3): quem aplica as ferramentas do preset e a
+    # INTERFACE; pela API, sem isto o agente fica sem o gerador de arquivos. Medido
+    # em 08/11: os dois pedidos de "gerar material" saiam so em texto por isso.
     corpo = json.dumps({"model": MODELO, "messages": [{"role": "user", "content": item["pergunta"]}],
-                        "stream": True, "chat_id": cid, "id": mid,
+                        "stream": True, "chat_id": cid, "id": mid, "tool_ids": TOOL_IDS,
                         "params": {"function_calling": "native"}}).encode()
     req = urllib.request.Request(URL + "/api/chat/completions", data=corpo, method="POST",
                                  headers={"Authorization": "Bearer " + TOK, "Content-Type": "application/json",
