@@ -13,6 +13,19 @@
 
 ---
 
+## 2026-11-08/09 (madrugada) — Etapa C sem reindexar, custo, Opus 5.5, auditoria definitiva (D98)
+
+- **Freio da esteira liberado** (decisão do Davi): 16 de 16 remoções aplicadas; a issue #243 fechou.
+- **Prompt:** em listas que pedem detalhe, o agente abre a ata (de preferência a ficha `.fatos.md`) em vez de repetir o título.
+- **Etapa C:** metadado (data, tipo, projeto) em 1.389 arquivos, **sem reindexar**; a esteira grava o metadado nos arquivos novos.
+- **Custo:** `NIDUM_INCLUDE_USAGE=1`; cerca de US$ 0,08 a 0,12 por resposta (piso, tabela do 5.5).
+- **Opus 5.5 no ar.** O 4.8 estava sem entrada de modelo-base, provavelmente inacessível para usuário comum. Incidente de ~2 min na troca (lista de modelos em cache).
+- **Auditoria com 31 perguntas da casa:** juiz Claude 84% (4.8) e 87% (5.5), 0 inventadas; o juiz GPT é muito mais rígido.
+- **Etapa D:** prévia de 15 fichas e do quadro do portfólio (chatnd-conhecimento#248), aguardando conferência.
+- **Aguardando o Davi:** confirmar com uma conta comum que o ChatND abre; conferir as fichas.
+
+---
+
 ## 2026-11-08 (noite) — #128 no ar, prompt de listas, etapa A medida e desligada, auditor GPT (D97)
 
 - **#128** (plural -ão, ecossistema de uma palavra, palavras grudadas): no ar às 22:48 UTC. A R01 passou a listar as 5 atas de 06/11.
