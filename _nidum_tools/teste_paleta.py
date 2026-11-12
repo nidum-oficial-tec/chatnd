@@ -29,8 +29,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 CAMINHO = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                        "gerador_de_arquivos_nidum.py")
 
-OFICIAIS = {"areia": "#E5E0D5", "pedra": "#9D9890", "terracota": "#9A4A2E",
-            "ceu": "#4F7187", "musgo": "#515E52", "escuro": "#1F1E1B"}
+# Brand Book v2 (novembro de 2026): o branco entrou na paleta (e a BASE) e o azul
+# prumo e o acento de nidum prumo. As outras seis nao mudaram de hex.
+OFICIAIS = {"branco": "#FFFFFF", "areia": "#E5E0D5", "pedra": "#9D9890",
+            "terracota": "#9A4A2E", "ceu": "#4F7187", "musgo": "#515E52",
+            "escuro": "#1F1E1B", "prumo": "#174E78"}
 ALIASES = {"creme": "areia", "cinza": "pedra", "azul": "ceu",
            "verde": "musgo", "preto": "escuro", "cremealt": "areia"}
 
@@ -62,12 +65,13 @@ def main():
 
     print("\n== nenhum nome oficial ficou sem definicao ==")
     usados = set(re.findall(r"var\(--([a-z]+)\)", fonte))
-    definidos = set(OFICIAIS) | set(ALIASES) | {"rn", "sc"}
+    # --acento e definida POR PECA (a cor do produto), fora do bloco fixo.
+    definidos = set(OFICIAIS) | set(ALIASES) | {"acento"}
     orfaos = sorted(u for u in usados if u not in definidos)
     check("nenhuma var(--x) sem definicao: %s" % (orfaos or "nenhuma"), not orfaos)
 
     print("\n== os dois blocos de paleta sao iguais ==")
-    blocos = re.findall(r"--areia:#E5E0D5.*?--cremealt:var\(--areia\)", fonte, re.S)
+    blocos = re.findall(r"--branco:#FFFFFF.*?--cremealt:var\(--areia\)", fonte, re.S)
     normal = [re.sub(r"[\s\"]+", "", b) for b in blocos]
     check("dois blocos encontrados", len(normal) == 2)
     check("e identicos entre si", len(set(normal)) == 1)
