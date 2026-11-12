@@ -1,10 +1,51 @@
 """
 title: Gerador de Arquivos Nidum
 author: Nidum
-version: 2.8.2
-description: Gera PPTX, XLSX, DOCX, PDF, HTML e APRESENTACAO HTML navegavel no servidor com alto padrao de acabamento (UX/UI) e a identidade do brandbook Nidum: paleta, fonte Maxima Nouva embutida, logos, contraste correto, layouts variados, tabelas refinadas, rodapes e numeracao. Insere imagens anexadas pelo usuario. Devolve link de download nativo.
+version: 2.9.0
+description: Gera PPTX, XLSX, DOCX, PDF, HTML e APRESENTACAO HTML navegavel no servidor com alto padrao de acabamento (UX/UI) e a identidade do Brand Book nidum v2: fundo branco, cor do produto so nos detalhes, titulos em iBrand, textos em Maxima Nouva embutida, logos oficiais, contraste correto, layouts variados, rodapes e numeracao. Insere imagens anexadas pelo usuario. Devolve link de download nativo.
 requirements: python-pptx, openpyxl, python-docx, reportlab
 changelog:
+  2.9.0:
+    - BRAND BOOK V2 (novembro de 2026). A 2.8.2 seguia o v1 (julho). Base: o manual
+      MKT_ManualBrandbook_12-11-2026_v2, que resume o Brand Book v2. O que mudou nos
+      arquivos gerados, em todos os formatos:
+    - FUNDO BRANCO. HTML, deck, PPTX e PDF pintavam areia em tudo; o v2 faz do branco
+      a base e deixa o areia so em secao suave (aqui: bloco de codigo do HTML).
+    - COR SO NOS DETALHES. Sai todo bloco de cor chapada: slide de secao/destaque
+      colorido, coluna colorida da divisao, cartoes coloridos, cabecalho de tabela
+      pintado (HTML/XLSX/PDF) e zebra. A estrutura passa a vir de fios de 1px, pontos
+      e espaco. Titulos deixam de ser musgo e ficam escuros.
+    - UMA COR POR PECA, ESCOLHIDA PELO PRODUTO. Parametro novo 'produto' (no FIM da
+      assinatura dos 6 metodos, para nao quebrar chamada posicional): '' = padrao
+      (logo escuro, acento terracota), 'institucional' (terracota), 'casas vivas'
+      (musgo), 'nidum mundo' (ceu), 'nidum prumo' (azul prumo 174E78, cor nova). O
+      campo 'cor' do slide deixou de ter efeito e saiu da docstring; continua aceito
+      para nao recusar chamada antiga. Valor desconhecido cai no padrao com log.
+    - SEM SOMBRA E SEM TRANSPARENCIA. Saem os box-shadow, os rgba() de texto e fio,
+      o blur da navegacao do deck e os cantos arredondados de imagem e slide.
+    - SLOGAN V2. "Fazer da casa um ninho." virou o PROPOSITO e deixou de assinar
+      peca. Rodape do HTML/DOCX/PDF e encerramento sem titulo (PPTX/deck) passam a
+      "Do imovel que existe ao ninho." (com acento no arquivo; ASCII aqui via chr).
+    - IBRAND NOS TITULOS COM ESPACAMENTO FECHADO: -2,2% (40pt+), -1,6% (24-40),
+      -1,5% (17-24), -1% (ate 17). HTML por letter-spacing, PPTX por 'spc', DOCX por
+      w:spacing (inserido na ordem do schema - fora de ordem o Word acusa arquivo
+      corrompido). PDF NAO: o ParagraphStyle do reportlab nao tem espacamento.
+    - ROTULO v2: maiusculas, espacado, SemiBold, escuro, com o PONTO do produto.
+    - LOGO NO TAMANHO MINIMO. O PNG oficial tem ~73% de margem transparente na
+      altura: o HTML mostrava o desenho com ~11px (minimo v2: 24px). Agora ~26px no
+      HTML/deck e ~33mm no PDF, com a margem transparente descontada no layout.
+    - BOTOES do editor HTML em minusculas com verbo ("editar", "salvar html"), em
+      pilula, sem sombra, o principal em terracota, com foco visivel.
+    - DOCX: o estilo Title do modelo padrao do Word trazia um fio azul (cor de tema)
+      embaixo do titulo; removido.
+    - Suite nova teste_marca_v2.py (confere os ARQUIVOS gerados, nao o fonte) e
+      teste_paleta.py estendido com branco e prumo. Achado ao escrever a suite: o PDF
+      do reportlab grava os streams em ASCII85+Flate, entao procurar cor no PDF cru
+      passava ate na versao antiga - a suite decodifica antes de procurar.
+    - FICA DE FORA, de proposito: pedra continua proibida como TEXTO (2.86:1 sobre
+      branco reprova o AA que o proprio v2 exige), entao rotulo e subtitulo saem
+      escuros, nao "cinza"; e os PNG de logo nao foram recortados (mudar o asset e
+      deploy de backend, outra frente).
   2.8.2:
     - A DOCSTRING ERA A CAUSA, O ALIAS E O SINTOMA. Telemetria de producao (4
       recusas identicas): o modelo mandou "corpo" e acertou TODO o resto que a
@@ -289,22 +330,77 @@ def _nome_padrao(titulo, ecossistema, extensao, versao=1, padrao="TEC"):
 # ----------------------------------------------------------------------------
 # Identidade visual da Nidum (brandbook MKT) - cores em hex, sem o '#'
 # ----------------------------------------------------------------------------
-# Paleta oficial (MKT_BrandbookNidum V1). Nomes do brandbook entre parenteses.
-NIDUM_TERRACOTA = "9A4A2E"   # terracota - assinatura / destaque
-NIDUM_VERDE = "515E52"       # musgo - titulos e blocos
-NIDUM_AZUL = "4F7187"        # ceu - blocos
-NIDUM_CINZA = "9D9890"       # pedra - SUPORTE (filetes/bordas); NAO usar como texto
-                             #         sobre areia (2.18:1 reprova) - ver rodape/ante
-NIDUM_PRETO = "1F1E1B"       # escuro - cor de TEXTO (inclusive antetitulos)
-NIDUM_CREME = "E5E0D5"       # areia - fundo principal
-# CREME_ALT fica E5E0D5 de proposito: e a zebra de tabela do XLSX/PDF, que assenta sobre
-# BRANCO (ROWBACKGROUNDS=[branco, cremealt]); ali areia contrasta. So no HTML - onde o
-# fundo virou areia - a alternancia (blockquote/code/pre) passou a BRANCO. Nao unificar.
-NIDUM_CREME_ALT = "E5E0D5"   # areia (zebra sobre branco no xlsx/pdf)
-NIDUM_BRANCO = "FFFFFF"
-# Tipografia da marca
-NIDUM_FONT = "Maxima Nouva"  # titulos, subtitulos e corpo
-NIDUM_FONT_LOGO = "Ibrand"   # exclusiva do logotipo
+# Paleta oficial (Brand Book nidum v2, novembro de 2026). Nomes do brandbook entre
+# parenteses. O QUE MUDOU DA V1 (2.9.0): o fundo passou a ser BRANCO (areia so em
+# secao suave); a cor sai dos BLOCOS e vai para os DETALHES (pontos, fios, rotulos,
+# botoes); UMA cor de acento por peca, escolhida pelo PRODUTO (ver _acento_da_peca);
+# nada de transparencia, sombra ou degrade das cores.
+NIDUM_TERRACOTA = "9A4A2E"   # terracota - acento INSTITUCIONAL e botao principal
+NIDUM_VERDE = "515E52"       # musgo - acento de casas vivas
+NIDUM_AZUL = "4F7187"        # ceu - acento de nidum mundo
+NIDUM_CINZA = "9D9890"       # pedra - SUPORTE: fios e divisores. NUNCA texto: da
+                             #         2.86:1 sobre branco e 2.18:1 sobre areia (reprova AA)
+NIDUM_PRETO = "1F1E1B"       # escuro - TEXTO (inclusive rotulos e subtitulos)
+NIDUM_CREME = "E5E0D5"       # areia - APOIO: secoes suaves. Deixou de ser o fundo.
+NIDUM_BRANCO = "FFFFFF"      # branco - a BASE (fundo de documento, deck e slide)
+NIDUM_PRUMO = "174E78"       # azul prumo - acento de nidum prumo (no lugar da terracota)
+# Tipografia da marca (v2): iBrand ganhou os TITULOS; o logo continua sendo ARQUIVO,
+# nunca a palavra digitada na fonte (o i ganha pingo e o espaco entre letras muda).
+NIDUM_FONT = "Maxima Nouva"  # textos, rotulos e interface
+NIDUM_FONT_LOGO = "Ibrand"   # titulos e destaques
+# Slogan v2 - assina todos os canais. "Fazer da casa um ninho." virou o PROPOSITO e
+# deixou de assinar peca. O "o" com acento entra por chr(0xF3) porque este arquivo e
+# ASCII-only (e um escape \u digitado aqui ja foi convertido em acento por editor).
+NIDUM_SLOGAN = "Do im" + chr(0xF3) + "vel que existe ao ninho."
+NIDUM_SLOGAN_HTML = "Do im&oacute;vel que existe ao ninho."
+
+# Acento por PRODUTO (v2: "cada produto tem a sua cor so nos detalhes"). Cada entrada:
+# (cor do acento, cor do arquivo de logo). Sem produto = padrao da marca: logo ESCURO
+# sobre branco, acento terracota. nidum prumo nao tem arquivo de logo proprio no build -
+# usa o escuro (cor permitida para a assinatura do prumo).
+_ACENTOS = {
+    "padrao": (NIDUM_TERRACOTA, "escuro"),
+    "institucional": (NIDUM_TERRACOTA, "terracota"),
+    "casas vivas": (NIDUM_VERDE, "verde"),
+    "nidum mundo": (NIDUM_AZUL, "azul"),
+    "nidum prumo": (NIDUM_PRUMO, "escuro"),
+}
+
+
+def _acento_da_peca(produto):
+    # Devolve (chave, hex do acento, cor do logo). Tolerante ao jeito que o modelo
+    # escreve ("Casas Vivas", "casa viva", "mundo", "prumo"). Valor desconhecido NAO
+    # derruba a geracao: cai no padrao e LOGA o que chegou.
+    p = unicodedata.normalize("NFD", str(produto or "").strip())
+    p = "".join(c for c in p if not unicodedata.combining(c)).lower()
+    if not p:
+        chave = "padrao"
+    elif "casa" in p and "viva" in p:
+        chave = "casas vivas"
+    elif "mundo" in p:
+        chave = "nidum mundo"
+    elif "prumo" in p:
+        chave = "nidum prumo"
+    elif "institucional" in p or p == "nidum":
+        chave = "institucional"
+    else:
+        log.info("gerador_nidum: produto %r desconhecido - usando o padrao", produto)
+        chave = "padrao"
+    acento, logo = _ACENTOS[chave]
+    return chave, acento, logo
+
+
+def _tracking_ibrand(size_pt):
+    # Espacamento entre letras da iBrand nos TITULOS (Brand Book v2): quanto maior,
+    # mais fechado. Devolve a fracao do tamanho (negativa). O LOGO nao segue isto -
+    # e arquivo, com espacamento proprio.
+    if size_pt >= 40:
+        return -0.022
+    if size_pt >= 24:
+        return -0.016
+    if size_pt >= 17:
+        return -0.015
+    return -0.010
 # Compatibilidade com versoes anteriores do gerador (nomes antigos -> paleta nova)
 NIDUM_SALVIA = NIDUM_AZUL
 NIDUM_OCRE = NIDUM_TERRACOTA
@@ -336,7 +432,8 @@ def _brand_dir():
 
 
 def _logo_path(cor):
-    # cor: areia | azul | escuro | terracota | verde
+    # cor: areia | azul | escuro | terracota | verde (nomes dos arquivos do build;
+    # azul = ceu, verde = musgo). Faltam pedra e branco do kit v2 - nao usados aqui.
     d = _brand_dir()
     if not d:
         return None
@@ -530,8 +627,11 @@ def _font_face(fname, weight, style="normal", family="Maxima Nouva"):
     )
 
 
-def _brand_css():
+def _brand_css(acento=NIDUM_TERRACOTA):
     # Folha de estilo da marca Nidum para HTML/PDF (fontes embutidas + paleta).
+    # Brand Book v2 (2.9.0): fundo branco, estrutura por fios de 1px e espaco em
+    # branco, UMA cor de acento (--acento, definida pelo produto) so nos detalhes,
+    # sem sombra, transparencia ou degrade. Titulos em iBrand com espacamento fechado.
     faces = "".join(
         [
             _font_face("MaximaNouva-Regular.ttf", 400),
@@ -551,57 +651,59 @@ def _brand_css():
     # PRAZO: revisar em 2026-12 - se nenhuma regra nova usar os antigos ate la, os
     # aliases saem e ficam so os seis. Quem revisar: procure "--creme" e "--azul"
     # no repo; zero ocorrencias fora deste bloco = pode remover.
-        ":root{--areia:#E5E0D5;--pedra:#9D9890;--terracota:#9A4A2E;"
-        "--ceu:#4F7187;--musgo:#515E52;--escuro:#1F1E1B;"
+        ":root{--branco:#FFFFFF;--areia:#E5E0D5;--pedra:#9D9890;--terracota:#9A4A2E;"
+        "--ceu:#4F7187;--musgo:#515E52;--escuro:#1F1E1B;--prumo:#174E78;"
         "--creme:var(--areia);--cinza:var(--pedra);--azul:var(--ceu);"
         "--verde:var(--musgo);--preto:var(--escuro);--cremealt:var(--areia);}"
         "*{box-sizing:border-box}"
-        "html{background:#E5E0D5}"
-        "body{background:#E5E0D5;color:#1F1E1B;"
+        "html{background:#FFFFFF}"
+        "body{background:#FFFFFF;color:#1F1E1B;"
         "font-family:'Maxima Nouva',-apple-system,Segoe UI,Roboto,Arial,sans-serif;"
-        "line-height:1.72;margin:0 auto;max-width:880px;padding:64px 44px 72px;"
+        "line-height:1.6;margin:0 auto;max-width:880px;padding:64px 44px 72px;"
         "font-size:18px;-webkit-font-smoothing:antialiased;}"
         "h1{font-family:'Ibrand','Maxima Nouva',sans-serif;font-size:2.7em;"
-        "color:#515E52;font-weight:400;line-height:1.08;"
-        "letter-spacing:-.005em;margin:0 0 .5em;}"
+        "color:#1F1E1B;font-weight:400;line-height:1.08;"
+        "letter-spacing:-.022em;margin:0 0 .5em;}"
         "h2{font-family:'Ibrand','Maxima Nouva',sans-serif;font-size:1.8em;"
-        "color:#515E52;font-weight:400;line-height:1.18;"
-        "margin:1.9em 0 .5em;padding-bottom:.22em;"
-        "border-bottom:2px solid rgba(154,74,46,.22);}"
-        "h3{font-size:1.28em;color:#9A4A2E;font-weight:600;margin:1.5em 0 .4em;}"
-        "h4{font-size:1em;color:#515E52;text-transform:uppercase;"
-        "letter-spacing:.14em;margin:1.5em 0 .4em;}"
+        "color:#1F1E1B;font-weight:400;line-height:1.18;"
+        "letter-spacing:-.016em;margin:1.9em 0 .5em;}"
+        "h3{font-family:'Ibrand','Maxima Nouva',sans-serif;font-size:1.28em;"
+        "color:#1F1E1B;font-weight:400;line-height:1.2;letter-spacing:-.015em;"
+        "margin:1.5em 0 .4em;}"
+        "h4{font-size:.72em;color:#1F1E1B;font-weight:600;text-transform:uppercase;"
+        "letter-spacing:.14em;margin:1.8em 0 .5em;}"
+        "h4::before{content:'';display:inline-block;width:.6em;height:.6em;"
+        "border-radius:50%;background:var(--acento);margin-right:.7em;"
+        "vertical-align:.05em;}"
         "p{margin:0 0 1.1em;}"
-        "a{color:#9A4A2E;text-decoration:none;"
-        "border-bottom:1px solid rgba(154,74,46,.4);}"
-        "strong,b{color:#9A4A2E;font-weight:700;}"
+        "a{color:var(--acento);text-decoration:none;"
+        "border-bottom:1px solid var(--acento);}"
+        "strong,b{color:#1F1E1B;font-weight:600;}"
         "ul,ol{margin:0 0 1.1em 1.3em;} li{margin:.45em 0;}"
-        "blockquote{margin:1.7em 0;padding:.7em 1.5em;border-left:4px solid #9A4A2E;"
-        "background:#FFFFFF;border-radius:0 12px 12px 0;color:#1F1E1B;font-style:italic;}"
-        "hr{border:none;border-top:2px solid rgba(157,152,144,.32);margin:2.4em 0;}"
-        "img{max-width:100%;height:auto;border-radius:14px;"
-        "box-shadow:0 12px 32px rgba(31,30,27,.15);}"
-        "table{border-collapse:separate;border-spacing:0;width:100%;margin:1.7em 0;"
-        "border-radius:12px;overflow:hidden;box-shadow:0 6px 20px rgba(31,30,27,.08);}"
-        "th{background:#515E52;color:#E5E0D5;text-align:left;padding:12px 14px;"
-        "font-weight:600;}"
-        "td{padding:11px 14px;border-bottom:1px solid #9D9890;}"
-        "tr:nth-child(even) td{background:rgba(255,255,255,.45);}"
-        "tr:last-child td{border-bottom:none;}"
-        "code{font-family:Consolas,Menlo,monospace;background:#FFFFFF;"
-        "border-radius:6px;padding:.12em .4em;font-size:.92em;}"
-        "pre{font-family:Consolas,Menlo,monospace;background:#FFFFFF;"
-        "border-radius:10px;padding:1em 1.2em;overflow:auto;}"
+        "li::marker{color:var(--acento);}"
+        "blockquote{margin:1.7em 0;padding:.1em 0 .1em 1.4em;"
+        "border-left:1px solid #1F1E1B;color:#1F1E1B;"
+        "font-family:'Ibrand','Maxima Nouva',sans-serif;font-size:1.2em;"
+        "line-height:1.3;letter-spacing:-.015em;}"
+        "hr{border:none;border-top:1px solid #9D9890;margin:2.4em 0;}"
+        "img{max-width:100%;height:auto;border-radius:0;}"
+        "table{border-collapse:collapse;width:100%;margin:1.7em 0;}"
+        "th{color:#1F1E1B;text-align:left;padding:10px 14px 10px 0;font-weight:600;"
+        "border-bottom:1px solid #1F1E1B;}"
+        "td{padding:10px 14px 10px 0;border-bottom:1px solid #9D9890;}"
+        "code{font-family:Consolas,Menlo,monospace;background:#E5E0D5;"
+        "padding:.12em .4em;font-size:.92em;}"
+        "pre{font-family:Consolas,Menlo,monospace;background:#E5E0D5;"
+        "padding:1em 1.2em;overflow:auto;}"
+        "pre code{padding:0;}"
         ".nidum-header{margin:0 0 40px;}"
-        ".nidum-header img{height:30px;box-shadow:none;border-radius:0;margin:0;}"
         ".nidum-footer{margin-top:64px;padding-top:18px;"
-        "border-top:2px solid rgba(157,152,144,.3);display:flex;align-items:center;"
-        "gap:10px;color:rgba(31,30,27,.62);font-size:.9em;letter-spacing:.02em;}"
-        ".nidum-footer img{height:20px;box-shadow:none;border-radius:0;margin:0;}"
+        "border-top:1px solid #9D9890;color:#1F1E1B;font-size:.9em;}"
         "@media(max-width:900px){body{padding:40px 22px 60px;font-size:17px;}}"
         "@media print{body{max-width:none;padding:0;background:#fff;}}"
     )
-    return "<style>/*NIDUM_BRAND*/\n" + faces + rules + "</style>"
+    acc = ":root{--acento:#" + str(acento or NIDUM_TERRACOTA).lstrip("#") + ";}"
+    return "<style>/*NIDUM_BRAND*/\n" + faces + rules + acc + "</style>"
 
 
 _RE_IMPORT_EXTERNO = re.compile(
@@ -623,24 +725,34 @@ def _guarda_chrome_css():
     # NAO conserta o CORPO. Se o modelo escrever o corpo em tema escuro com acento
     # fora da paleta, ele continua assim - quem escreve o corpo e o modelo, e quem
     # resolve isso e a skill de HTML, nao a ferramenta.
+    #
+    # TAMANHO DA LOGO (2.9.0): o PNG oficial e 1920x1080 com o desenho ocupando so
+    # ~27% da altura - o resto e margem transparente. Com height:40px o "nidum" saia
+    # com ~11px de altura, abaixo do minimo do Brand Book v2 (24px). Agora a imagem
+    # tem 96px e a margem negativa devolve o espaco transparente: o desenho fica com
+    # ~26px de altura sem empurrar o layout.
     return (
         "<style>/*NIDUM_GUARDA*/\n"
         "header.nidum-header,footer.nidum-footer{"
         "background:transparent!important;padding:24px 0!important;"
         "margin:0!important;border:0!important;display:block!important;"
-        "text-align:center!important;}"
+        "text-align:center!important;box-shadow:none!important;}"
         "header.nidum-header img,footer.nidum-footer img{"
-        "height:40px!important;width:auto!important;max-width:none!important;"
+        "height:96px!important;width:auto!important;max-width:none!important;"
+        "margin:-35px auto!important;border-radius:0!important;"
         "display:inline-block!important;object-fit:contain!important;"
-        "filter:none!important;opacity:1!important;}"
-        "footer.nidum-footer span{color:#9D9890!important;font-size:13px!important;"
+        "filter:none!important;opacity:1!important;box-shadow:none!important;}"
+        "footer.nidum-footer{border-top:1px solid #9D9890!important;"
+        "margin-top:64px!important;}"
+        "footer.nidum-footer span{color:#1F1E1B!important;font-size:13px!important;"
         "display:block!important;margin-top:8px!important;}"
         "</style>"
     )
 
 
-def _injetar_marca_html(conteudo):
+def _injetar_marca_html(conteudo, produto=""):
     # Insere a folha de marca no <head> e um rodape sobrio antes de </body>.
+    # 'produto' escolhe o acento e a cor da logo (Brand Book v2: uma cor por peca).
     if "NIDUM_BRAND" in conteudo:
         return conteudo
     # OFFLINE: o base64 das fontes garante que o HTML funcione sem rede. Um @import
@@ -656,7 +768,8 @@ def _injetar_marca_html(conteudo):
             "gerador_nidum: %d referencia(s) externa(s) de estilo removida(s) "
             "(o HTML precisa abrir offline)", n_ext,
         )
-    css = _brand_css()
+    _chave, acento, cor_logo = _acento_da_peca(produto)
+    css = _brand_css(acento)
     low = conteudo.lower()
     idx = low.find("</head>")
     if idx != -1:
@@ -672,8 +785,9 @@ def _injetar_marca_html(conteudo):
             )
         else:
             conteudo = css + conteudo
-    logo = _logo_b64("terracota")
-    # Logo de ABERTURA (topo) - regra 2.4.0. Pagina areia -> logo terracota. Inserido logo
+    logo = _logo_b64(cor_logo)
+    # Logo de ABERTURA (topo) - regra 2.4.0. Pagina branca -> logo na cor do produto
+    # (escuro no padrao; Brand Book v2). Inserido logo
     # apos <body>; o rodape (abaixo) traz a logo de ENCERRAMENTO. Idempotente pelo marcador
     # NIDUM_BRAND (checado no topo desta funcao).
     if logo:
@@ -686,7 +800,7 @@ def _injetar_marca_html(conteudo):
     footer = (
         "<footer class='nidum-footer'>"
         + (("<img src='" + logo + "'>") if logo else "")
-        + "<span>nidum. fazer da casa um ninho.</span></footer>"
+        + "<span>" + NIDUM_SLOGAN_HTML + "</span></footer>"
     )
     # O bloco-guarda vai DEPOIS do rodape e ANTES de </body>: por ordem de cascata
     # ele e a ultima palavra sobre o chrome, mesmo que o modelo tenha escrito o
@@ -732,20 +846,24 @@ def _bloco_editor_html(nome_download):
     nm = _esc_js(nome_download or "documento.html")
     css = (
         "<style>/*" + _EDITOR_MARCADOR + "*/"
+        # Brand Book v2: botao em pilula, texto em minusculas e com verbo, so a cor
+        # acompanha o fundo. Principal (salvar) em terracota; o outro so contorno.
+        # Sem sombra. Foco visivel (acessibilidade AA).
         "#ndbar{position:fixed;top:14px;right:14px;z-index:2147483647;display:flex;gap:8px;"
-        "font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif}"
-        "#ndbar button{border:none;border-radius:999px;padding:8px 15px;font-size:14px;"
-        "cursor:pointer;box-shadow:0 4px 14px rgba(31,30,27,.22);background:#515E52;"
-        "color:#E5E0D5;font-weight:600;line-height:1}"
-        "#ndbar button.alt{background:#9A4A2E;color:#E5E0D5}"
-        "body.ndediting{outline:2px dashed rgba(154,74,46,.55);outline-offset:-8px}"
+        "font-family:'Maxima Nouva',-apple-system,Segoe UI,Roboto,Arial,sans-serif}"
+        "#ndbar button{border:1px solid #1F1E1B;border-radius:999px;height:40px;"
+        "padding:0 18px;font-size:14px;cursor:pointer;background:#FFFFFF;"
+        "color:#1F1E1B;font-family:inherit;font-weight:600;line-height:1}"
+        "#ndbar button.alt{background:#9A4A2E;border-color:#9A4A2E;color:#FFFFFF}"
+        "#ndbar button:focus-visible{outline:2px solid #1F1E1B;outline-offset:2px}"
+        "body.ndediting{outline:1px dashed #9A4A2E;outline-offset:-8px}"
         "@media print{#ndbar{display:none!important}}"
         "</style>"
     )
     barra = (
         "<div id=\"ndbar\" contenteditable=\"false\">"
-        "<button id=\"ndedit\" type=\"button\">Editar</button>"
-        "<button id=\"ndsave\" type=\"button\" class=\"alt\">Salvar HTML</button>"
+        "<button id=\"ndedit\" type=\"button\">editar</button>"
+        "<button id=\"ndsave\" type=\"button\" class=\"alt\">salvar html</button>"
         "</div>"
     )
     js = (
@@ -757,7 +875,7 @@ def _bloco_editor_html(nome_download):
         "document.body.setAttribute('contenteditable',on?'true':'false');"
         "document.body.classList.toggle('ndediting',!!on);"
         "var bb=bar();if(bb){bb.setAttribute('contenteditable','false');}"
-        "var e=document.getElementById('ndedit');if(e){e.textContent=on?'Editando':'Editar';}}"
+        "var e=document.getElementById('ndedit');if(e){e.textContent=on?'parar de editar':'editar';}}"
         "function save(){var was=window.__ndEdit;if(was){setEdit(false);}"
         "var html='<!DOCTYPE html>\\n'+document.documentElement.outerHTML;"
         "var blob=new Blob([html],{type:'text/html;charset=utf-8'});"
@@ -811,69 +929,91 @@ DECK_CSS = (
     # Mesma paleta do bloco acima (nomes oficiais + alias). Os dois blocos sao
     # copias por desenho - CSS embutido em arquivo entregue nao pode depender de
     # import; se um mudar, o outro muda junto. O teste afirma que sao iguais.
-    ":root{--areia:#E5E0D5;--pedra:#9D9890;--terracota:#9A4A2E;"
-    "--ceu:#4F7187;--musgo:#515E52;--escuro:#1F1E1B;"
+    ":root{--branco:#FFFFFF;--areia:#E5E0D5;--pedra:#9D9890;--terracota:#9A4A2E;"
+    "--ceu:#4F7187;--musgo:#515E52;--escuro:#1F1E1B;--prumo:#174E78;"
     "--creme:var(--areia);--cinza:var(--pedra);--azul:var(--ceu);"
-    "--verde:var(--musgo);--preto:var(--escuro);--cremealt:var(--areia);"
-    "--rn:26px;"
-    "--sc:0 26px 70px rgba(31,30,27,.34)}"
+    "--verde:var(--musgo);--preto:var(--escuro);--cremealt:var(--areia);}"
+    # Brand Book v2 (2.9.0): slide BRANCO, sem sombra nem canto arredondado, sem
+    # bloco de cor chapada. A estrutura vem de fios de 1px, pontos e espaco; a cor do
+    # produto (--acento, definida por peca) so nos detalhes. O palco em volta do slide
+    # segue escuro (fundo escuro pontual, decisao 2.4.0), agora chapado - sem blur.
     "html,body{height:100%;background:#1F1E1B;"
     "font-family:'Maxima Nouva',-apple-system,Segoe UI,Roboto,Arial,sans-serif}"
     ".deck{position:fixed;inset:0;display:flex;align-items:center;"
     "justify-content:center;padding:3vh 3vw}"
     ".slide{position:absolute;width:min(94vw,1180px);aspect-ratio:16/9;"
-    "border-radius:var(--rn);overflow:hidden;box-shadow:var(--sc);opacity:0;"
+    "overflow:hidden;opacity:0;"
     "transform:translateY(16px) scale(.985);transition:opacity .5s ease,"
     "transform .55s cubic-bezier(.2,.7,.2,1);pointer-events:none;display:flex;"
-    "flex-direction:column;justify-content:center;padding:6% 7%;background:#E5E0D5;"
+    "flex-direction:column;justify-content:center;padding:6% 7%;background:#FFFFFF;"
     "color:#1F1E1B}"
     ".slide.active{opacity:1;transform:none;pointer-events:auto}"
-    ".slide .ante{font-size:.92rem;letter-spacing:.2em;text-transform:uppercase;"
-    "color:rgba(31,30,27,.62);margin-bottom:1rem}"
+    # Rotulo: maiusculas, espacado, com o PONTO na cor do produto.
+    ".slide .ante{font-size:.78rem;font-weight:600;letter-spacing:.18em;"
+    "text-transform:uppercase;color:#1F1E1B;margin-bottom:1.1rem}"
+    ".slide .ante::before{content:'';display:inline-block;width:.6em;height:.6em;"
+    "border-radius:50%;background:var(--acento);margin-right:.8em;vertical-align:.05em}"
     ".slide h1{font-family:'Ibrand','Maxima Nouva',sans-serif;"
-    "font-size:clamp(2.1rem,5.4vw,3.9rem);color:var(--verde);"
-    "font-weight:400;line-height:1.05}"
+    "font-size:clamp(2.1rem,5.4vw,3.9rem);color:#1F1E1B;"
+    "font-weight:400;line-height:1.08;letter-spacing:-.022em}"
     ".slide h2{font-family:'Ibrand','Maxima Nouva',sans-serif;"
-    "font-size:clamp(1.6rem,3.8vw,2.6rem);color:var(--verde);"
-    "font-weight:400;line-height:1.1}"
-    ".slide p{font-size:clamp(1rem,1.7vw,1.28rem);line-height:1.62;margin-top:1rem;"
-    "max-width:60ch;color:var(--preto)}"
+    "font-size:clamp(1.6rem,3.8vw,2.6rem);color:#1F1E1B;"
+    "font-weight:400;line-height:1.15;letter-spacing:-.016em}"
+    ".slide h3{font-family:'Ibrand','Maxima Nouva',sans-serif;font-weight:400;"
+    "letter-spacing:-.015em;line-height:1.2}"
+    ".slide p{font-size:clamp(1rem,1.7vw,1.28rem);line-height:1.5;margin-top:1rem;"
+    "max-width:60ch;color:#1F1E1B}"
     ".slide ul{margin:1.1rem 0 0 1.2rem} .slide li{font-size:clamp(1rem,1.6vw,1.2rem);"
     "line-height:1.5;margin:.55rem 0}"
-    ".slide .logo{height:30px;position:absolute;right:6%;bottom:6.4%;opacity:.92}"
+    ".slide li::marker{color:var(--acento)}"
+    # Logo: o PNG tem ~27% de desenho na altura; 96px de imagem = ~26px de desenho
+    # (minimo do v2: 24px). As margens negativas descontam o transparente.
+    ".slide .logo{height:96px;position:absolute;right:calc(6% - 35px);"
+    "bottom:calc(6.4% - 35px)}"
     ".slide.cover{align-items:center;text-align:center}"
-    ".slide.cover .logo-c{height:clamp(54px,8vw,108px);margin-bottom:1.4rem}"
-    ".slide.cover .sub{color:var(--terracota);font-size:clamp(1.1rem,2vw,1.5rem);"
-    "margin-top:.7rem}"
-    ".slide.fill{justify-content:center;color:var(--creme)}"
-    ".slide.fill .ante{color:rgba(229,224,213,.72)}"
-    ".slide.fill h1,.slide.fill h2{color:var(--creme)} .slide.fill p{color:var(--creme)}"
+    ".slide.cover .logo-c{height:clamp(150px,22vw,280px);"
+    "margin:calc(clamp(150px,22vw,280px) * -.36) 0 "
+    "calc(clamp(150px,22vw,280px) * -.36 + 1.6rem)}"
+    ".slide.cover .sub{color:#1F1E1B;font-size:clamp(1.1rem,2vw,1.5rem);"
+    "margin-top:.9rem}"
+    # Secao: titulo grande + um fio curto na cor do produto.
+    ".slide.sec h1::after{content:'';display:block;width:64px;height:1px;"
+    "background:var(--acento);margin-top:1.4rem}"
+    # Destaque: frase em iBrand, aberta por um fio escuro a esquerda.
+    ".slide.dest .corpo{border-left:1px solid #1F1E1B;padding-left:2rem}"
+    ".slide.dest .corpo p{font-size:clamp(1rem,1.8vw,1.3rem)}"
+    # Divisao: duas colunas brancas; o fio escuro abre a coluna da direita.
     ".slide.split{flex-direction:row;padding:0}"
-    ".split .left{flex:0 0 42%;display:flex;align-items:center;padding:6.5%}"
-    ".split .left h2{color:var(--creme)}"
-    ".split .right{flex:1;background:var(--creme);display:flex;flex-direction:column;"
-    "justify-content:center;padding:6.5%}"
-    ".num{display:flex;gap:1.1rem;align-items:baseline;margin:.85rem 0}"
-    ".num .n{font-size:clamp(1.8rem,3vw,2.7rem);color:var(--terracota);"
-    "font-weight:700;line-height:1;min-width:1.5em}"
+    ".split .left{flex:0 0 40%;display:flex;align-items:center;padding:6.5%}"
+    ".split .right{flex:1;display:flex;flex-direction:column;justify-content:center;"
+    "padding:6.5%;border-left:1px solid #1F1E1B;margin:6% 0}"
+    ".num{display:flex;gap:1.1rem;align-items:baseline;margin:.85rem 0;"
+    "padding-bottom:.85rem;border-bottom:1px solid #9D9890}"
+    ".num:last-of-type{border-bottom:none}"
+    ".num .n{font-family:'Ibrand','Maxima Nouva',sans-serif;"
+    "font-size:clamp(1.8rem,3vw,2.7rem);color:var(--acento);"
+    "font-weight:400;line-height:1;min-width:1.5em;letter-spacing:-.02em}"
     ".num .t{font-size:clamp(1rem,1.6vw,1.22rem);line-height:1.45}"
-    ".num .t b{color:var(--verde)}"
-    ".cards{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin-top:1.3rem}"
-    ".card{border-radius:18px;padding:1.3rem 1.45rem;color:var(--creme)}"
-    ".card h3{font-size:1.22rem;margin-bottom:.35rem} "
-    ".card p{color:rgba(229,224,213,.92);margin-top:.1rem;font-size:1.02rem;max-width:none}"
+    ".num .t b{color:#1F1E1B;font-weight:600}"
+    # Cartoes: sem fundo. Cada um abre com um fio escuro e um ponto do produto.
+    ".cards{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem 2.2rem;margin-top:1.6rem}"
+    ".card{border-top:1px solid #1F1E1B;padding-top:1rem;color:#1F1E1B}"
+    ".card h3{font-size:1.3rem;margin-bottom:.35rem}"
+    ".card h3::before{content:'';display:inline-block;width:.5em;height:.5em;"
+    "border-radius:50%;background:var(--acento);margin-right:.6em;vertical-align:.1em}"
+    ".card p{margin-top:.1rem;font-size:1.02rem;max-width:none}"
     ".nav{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;"
-    "align-items:center;gap:14px;background:rgba(31,30,27,.55);"
-    "-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);padding:8px 16px;"
-    "border-radius:999px;z-index:10}"
+    "align-items:center;gap:14px;background:#1F1E1B;border:1px solid #9D9890;"
+    "padding:6px 14px;border-radius:999px;z-index:10}"
     ".nav button{border:none;background:transparent;color:#E5E0D5;font-size:1.3rem;"
     "cursor:pointer;width:34px;height:34px;border-radius:50%;line-height:1;"
-    "transition:background .15s}"
-    ".nav button:hover{background:rgba(229,224,213,.18)}"
+    "font-family:inherit}"
+    ".nav button:hover,.nav button:focus-visible{color:#FFFFFF;"
+    "outline:1px solid #E5E0D5}"
     ".dots{display:flex;gap:7px}"
-    ".dot{width:8px;height:8px;border-radius:50%;background:rgba(229,224,213,.42);"
+    ".dot{width:8px;height:8px;border-radius:50%;background:#9D9890;"
     "cursor:pointer;transition:background .2s,width .2s}"
-    ".dot.on{background:#E5E0D5;width:22px;border-radius:999px}"
+    ".dot.on{background:#FFFFFF;width:22px;border-radius:999px}"
     ".count{color:#E5E0D5;font-size:.84rem;min-width:52px;text-align:center;"
     "letter-spacing:.04em}"
     "@media print{.nav{display:none}.slide{position:relative;opacity:1!important;"
@@ -895,12 +1035,14 @@ DECK_JS = (
 )
 
 
-def _slide_html(s, tipo, mapa, cores_secao, cores_cartao, sec, logo_t, logo_a):
+def _slide_html(s, tipo, logo):
+    # Brand Book v2 (2.9.0): todo slide e branco e leva a MESMA logo (a cor do
+    # produto). O campo 'cor' do slide deixou de pintar fundo - nao ha mais bloco de
+    # cor chapada; a cor da peca e uma so e vem do produto (--acento no CSS).
     titulo = _esc(s.get("titulo"))
     sub = _esc(s.get("subtitulo"))
     texto = _esc(s.get("texto"))
-    logo_creme = ("<img class='logo' src='" + logo_t + "'>") if logo_t else ""
-    logo_color = ("<img class='logo' src='" + logo_a + "'>") if logo_a else ""
+    logo_pe = ("<img class='logo' src='" + logo + "' alt='nidum'>") if logo else ""
 
     def bl():
         items = _lista(s.get("bullets"))
@@ -913,24 +1055,19 @@ def _slide_html(s, tipo, mapa, cores_secao, cores_cartao, sec, logo_t, logo_a):
     h2 = ("<h2>" + titulo + "</h2>") if titulo else ""
     par = ("<p>" + texto + "</p>") if texto else ""
 
+    lg_c = ("<img class='logo-c' src='" + logo + "' alt='nidum'>") if logo else ""
     if tipo == "capa":
-        lg = ("<img class='logo-c' src='" + logo_t + "'>") if logo_t else ""
         subc = ("<div class='sub'>" + sub + "</div>") if sub else ""
-        return "<section class='slide cover'>" + lg + h1 + subc + "</section>"
+        return "<section class='slide cover'>" + lg_c + h1 + subc + "</section>"
     if tipo == "secao":
-        c = mapa.get(str(s.get("cor", "")).lower(), cores_secao[sec[0] % len(cores_secao)])
-        sec[0] += 1
-        return ("<section class='slide fill' style='background:" + c + "'>"
-                + ante + h1 + logo_color + "</section>")
+        return ("<section class='slide sec'>" + ante + h1 + logo_pe + "</section>")
     if tipo == "destaque":
-        c = mapa.get(str(s.get("cor", "terracota")).lower(), "#9A4A2E")
-        return ("<section class='slide fill' style='background:" + c + "'>"
-                + ante + h1 + par + logo_color + "</section>")
+        return ("<section class='slide dest'>" + ante + "<div class='corpo'>" + h1
+                + par + "</div>" + logo_pe + "</section>")
     if tipo == "divisao":
-        c = mapa.get(str(s.get("cor", "verde")).lower(), "#515E52")
         right = ante + par + bl()
-        return ("<section class='slide split'><div class='left' style='background:"
-                + c + "'>" + h2 + "</div><div class='right'>" + right + "</div></section>")
+        return ("<section class='slide split'><div class='left'>" + h2
+                + "</div><div class='right'>" + right + "</div>" + logo_pe + "</section>")
     if tipo == "numerada":
         itens = _lista_de_dicts(s.get("itens"))
         norm = []
@@ -946,25 +1083,26 @@ def _slide_html(s, tipo, mapa, cores_secao, cores_cartao, sec, logo_t, logo_a):
             inner = ("<b>" + t_i + "</b> " + x_i) if t_i else x_i
             rows += ("<div class='num'><div class='n'>" + str(k + 1)
                      + "</div><div class='t'>" + inner + "</div></div>")
-        return "<section class='slide'>" + ante + h2 + rows + logo_creme + "</section>"
+        return "<section class='slide'>" + ante + h2 + rows + logo_pe + "</section>"
     if tipo == "cartoes":
         itens = _lista_de_dicts(s.get("itens"))
         if not itens:
             itens = [{"texto": b} for b in _lista(s.get("bullets"))]
         cards = ""
-        for k, it in enumerate(itens[:4]):
-            c = cores_cartao[k % len(cores_cartao)]
+        for it in itens[:4]:
             ch = ("<h3>" + _esc(it.get("titulo")) + "</h3>") if it.get("titulo") else ""
             cp = ("<p>" + _esc(it.get("texto")) + "</p>") if it.get("texto") else ""
-            cards += ("<div class='card' style='background:" + c + "'>" + ch + cp + "</div>")
+            cards += ("<div class='card'>" + ch + cp + "</div>")
         return ("<section class='slide'>" + ante + h2 + "<div class='cards'>"
-                + cards + "</div>" + logo_creme + "</section>")
+                + cards + "</div>" + logo_pe + "</section>")
     if tipo == "encerramento":
-        lg = ("<img class='logo-c' src='" + logo_t + "'>") if logo_t else ""
+        # Sem titulo, fecha com o slogan v2 (antes: "Fazer da casa um ninho.", que
+        # virou proposito e deixou de assinar peca).
+        h1e = "<h1>" + (titulo or _esc(NIDUM_SLOGAN)) + "</h1>"
         subc = ("<div class='sub'>" + sub + "</div>") if sub else ""
-        return "<section class='slide cover'>" + lg + h1 + subc + "</section>"
+        return "<section class='slide cover'>" + lg_c + h1e + subc + "</section>"
     return ("<section class='slide'>" + ante + h2 + par + bl()
-            + logo_creme + "</section>")
+            + logo_pe + "</section>")
 
 
 def _get_user_id(__user__):
@@ -1498,7 +1636,7 @@ class Tools:
     async def gerar_pptx(
         self, titulo: str, slides: list, marca: bool = True, __user__: dict = None,
         ecossistema: str = "", versao: int = 1, imagens: list = None,
-        __event_emitter__=None, __message_id__: str = None
+        __event_emitter__=None, __message_id__: str = None, produto: str = ""
     ) -> str:
         """Gera uma apresentacao PowerPoint (.pptx) e devolve um link de download.
 
@@ -1517,32 +1655,29 @@ class Tools:
             mudo no arquivo e a ferramenta RECUSA a geracao com erro. A apresentacao
             precisa de ao menos 3 slides preenchidos.
 
-            Os OITO tipos, e o que cada um espera:
+            Os OITO tipos, e o que cada um espera (todos em fundo branco):
               capa          - abertura. subtitulo (opcional).
-              secao         - divisoria de tema, fundo colorido. 'cor' (opcional).
-              conteudo      - titulo + 'texto' e/ou 'bullets' em fundo creme.
-              destaque      - uma frase ou conceito forte em fundo colorido cheio.
-                              'texto' + 'cor'.
-              divisao       - titulo num bloco de cor a esquerda, 'texto'/'bullets'
-                              a direita. Defina 'cor'.
+              secao         - divisoria de tema: rotulo + titulo grande.
+              conteudo      - titulo + 'texto' e/ou 'bullets'.
+              destaque      - uma frase ou conceito forte, em letra grande. 'texto'.
+              divisao       - titulo a esquerda, 'texto'/'bullets' a direita.
               numerada      - etapas ou passos com numeros grandes. Preencha
                               'itens' com uma lista de {titulo, texto}.
-              cartoes       - 2 a 4 cartoes coloridos lado a lado (valores,
-                              pilares). Preencha 'itens' com {titulo, texto}.
-              encerramento  - fecho.
+              cartoes       - 2 a 4 blocos lado a lado (valores, pilares).
+                              Preencha 'itens' com {titulo, texto}.
+              encerramento  - fecho. Sem titulo, fecha com o slogan da marca.
 
             Campos aceitos: tipo, titulo, subtitulo, texto (string), bullets
             (lista de strings), itens (lista de {titulo, texto} - so em
-            'numerada' e 'cartoes'), cor ('verde'|'azul'|'terracota'|'preto'),
-            imagem (marcador tipo 'IMAGEM_1').
+            'numerada' e 'cartoes'), imagem (marcador tipo 'IMAGEM_1').
+            Nao mande 'cor': a cor da peca e uma so e vem de 'produto'.
 
             VARIE os layouts - nao use so 'conteudo', fica monotono. Numa
             apresentacao tipica alterne os tipos (ex.: capa, conteudo, destaque,
-            cartoes, divisao, numerada, secao, encerramento) e varie a 'cor'
-            entre slides coloridos vizinhos. Para pilares, valores ou categorias
-            prefira 'cartoes'; para etapas ou passos, 'numerada'; para uma
-            afirmacao de impacto, 'destaque'. Prefira bullets curtos a
-            paragrafos longos.
+            cartoes, divisao, numerada, secao, encerramento). Para pilares,
+            valores ou categorias prefira 'cartoes'; para etapas ou passos,
+            'numerada'; para uma afirmacao de impacto, 'destaque'. Prefira
+            bullets curtos a paragrafos longos.
         :param marca: aplica a identidade visual da Nidum (padrao True).
         :param ecossistema: sigla do ecossistema para a nomenclatura oficial (opcional).
         :param versao: numero de versao para o nome do arquivo (padrao 1).
@@ -1554,18 +1689,22 @@ class Tools:
             cole, sem reescrever, sem encurtar e sem remover a barra inicial da URL.
             Um caractere a menos quebra o download (o navegador resolve o caminho
             relativo a pagina do chat e devolve 404).
+        :param produto: de qual produto e a peca - define a UNICA cor de destaque
+            e a cor da logo. '' (padrao da marca), 'institucional', 'casas vivas',
+            'nidum mundo' ou 'nidum prumo'. Nos textos, escreva 'nidum' e os nomes
+            de produto sempre em minusculas.
         """
         _ctx_entrega(__event_emitter__, __message_id__)
         try:
             return await self._pptx(titulo, slides, marca, __user__, ecossistema,
-                                    versao, imagens)
+                                    versao, imagens, produto)
         except Exception:
             return _erro_limpo("gerar_pptx")
 
     async def gerar_xlsx(
         self, titulo: str, planilhas: list, marca: bool = True, __user__: dict = None,
         ecossistema: str = "", versao: int = 1,
-        __event_emitter__=None, __message_id__: str = None
+        __event_emitter__=None, __message_id__: str = None, produto: str = ""
     ) -> str:
         """Gera uma planilha Excel (.xlsx) e devolve um link de download.
 
@@ -1580,17 +1719,20 @@ class Tools:
             cole, sem reescrever, sem encurtar e sem remover a barra inicial da URL.
             Um caractere a menos quebra o download (o navegador resolve o caminho
             relativo a pagina do chat e devolve 404).
+        :param produto: de qual produto e a peca ('', 'institucional', 'casas vivas',
+            'nidum mundo', 'nidum prumo'). Define a cor da aba.
         """
         _ctx_entrega(__event_emitter__, __message_id__)
         try:
-            return await self._xlsx(titulo, planilhas, marca, __user__, ecossistema, versao)
+            return await self._xlsx(titulo, planilhas, marca, __user__, ecossistema,
+                                    versao, produto)
         except Exception:
             return _erro_limpo("gerar_xlsx")
 
     async def gerar_docx(
         self, titulo: str, secoes: list, marca: bool = True, __user__: dict = None,
         ecossistema: str = "", versao: int = 1, imagens: list = None,
-        __event_emitter__=None, __message_id__: str = None
+        __event_emitter__=None, __message_id__: str = None, produto: str = ""
     ) -> str:
         """Gera um documento Word (.docx) e devolve um link de download.
 
@@ -1608,18 +1750,21 @@ class Tools:
             cole, sem reescrever, sem encurtar e sem remover a barra inicial da URL.
             Um caractere a menos quebra o download (o navegador resolve o caminho
             relativo a pagina do chat e devolve 404).
+        :param produto: de qual produto e a peca ('', 'institucional', 'casas vivas',
+            'nidum mundo', 'nidum prumo'). Define a cor da logo e dos detalhes.
+            Nos textos, 'nidum' e nomes de produto sempre em minusculas.
         """
         _ctx_entrega(__event_emitter__, __message_id__)
         try:
             return await self._docx(titulo, secoes, marca, __user__, ecossistema,
-                                    versao, imagens)
+                                    versao, imagens, produto)
         except Exception:
             return _erro_limpo("gerar_docx")
 
     async def gerar_pdf(
         self, titulo: str, secoes: list, marca: bool = True, __user__: dict = None,
         ecossistema: str = "", versao: int = 1, imagens: list = None,
-        __event_emitter__=None, __message_id__: str = None
+        __event_emitter__=None, __message_id__: str = None, produto: str = ""
     ) -> str:
         """Gera um documento PDF e devolve um link de download.
 
@@ -1637,11 +1782,14 @@ class Tools:
             cole, sem reescrever, sem encurtar e sem remover a barra inicial da URL.
             Um caractere a menos quebra o download (o navegador resolve o caminho
             relativo a pagina do chat e devolve 404).
+        :param produto: de qual produto e a peca ('', 'institucional', 'casas vivas',
+            'nidum mundo', 'nidum prumo'). Define a cor da logo e dos detalhes.
+            Nos textos, 'nidum' e nomes de produto sempre em minusculas.
         """
         _ctx_entrega(__event_emitter__, __message_id__)
         try:
             return await self._pdf(titulo, secoes, marca, __user__, ecossistema,
-                                   versao, imagens)
+                                   versao, imagens, produto)
         except Exception:
             return _erro_limpo("gerar_pdf")
 
@@ -1701,12 +1849,17 @@ class Tools:
     async def gerar_html(
         self, titulo: str, html: str, __user__: dict = None,
         ecossistema: str = "", versao: int = 1, imagens: list = None,
-        __event_emitter__=None, __message_id__: str = None
+        __event_emitter__=None, __message_id__: str = None, produto: str = ""
     ) -> str:
         """Gera um arquivo HTML (.html) e devolve um link de download.
 
         :param titulo: titulo/nome do arquivo.
         :param html: documento HTML completo (string), pronto para abrir no navegador.
+            A ferramenta ja aplica a marca (fontes, logo, rodape). Se escrever CSS
+            proprio, siga a marca: fundo branco, texto escuro #1F1E1B, sem blocos de
+            cor, sem sombra, sem degrade e sem transparencia; separe com fios de 1px;
+            use a cor do produto so em detalhes (pontos, fios, botoes, rotulos).
+            Nao digite 'nidum' como logo: a logo oficial ja entra no topo.
         :param ecossistema: sigla do ecossistema para a nomenclatura oficial (opcional).
         :param versao: numero de versao para o nome do arquivo (padrao 1).
         :param imagens: imagens ANEXADAS PELO USUARIO. O modelo posiciona o marcador
@@ -1716,6 +1869,9 @@ class Tools:
             cole, sem reescrever, sem encurtar e sem remover a barra inicial da URL.
             Um caractere a menos quebra o download (o navegador resolve o caminho
             relativo a pagina do chat e devolve 404).
+        :param produto: de qual produto e a peca ('', 'institucional', 'casas vivas',
+            'nidum mundo', 'nidum prumo'). Define a cor da logo e dos detalhes.
+            Nos textos, 'nidum' e nomes de produto sempre em minusculas.
         """
         _ctx_entrega(__event_emitter__, __message_id__)
         try:
@@ -1749,7 +1905,7 @@ class Tools:
                     )
                 # _injetar_marca_html le fontes/logo do disco (IO) - por isso
                 # roda aqui dentro da thread.
-                c = _injetar_marca_html(c)
+                c = _injetar_marca_html(c, produto)
                 if com_editor:
                     c = _injetar_editor(c, nome)
                 return c.encode("utf-8")
@@ -1765,14 +1921,14 @@ class Tools:
     async def gerar_apresentacao_html(
         self, titulo: str, slides: list, __user__: dict = None,
         ecossistema: str = "", versao: int = 1, imagens: list = None,
-        __event_emitter__=None, __message_id__: str = None
+        __event_emitter__=None, __message_id__: str = None, produto: str = ""
     ) -> str:
         """Gera uma APRESENTACAO em HTML navegavel (deck) com a identidade Nidum.
 
         Deck autocontido: 1 slide por vez, navegacao por setas/teclado/dots,
-        cantos arredondados, transicoes, contraste correto e fonte embutida.
+        transicoes, contraste correto e fonte embutida.
         :param slides: mesma estrutura do gerar_pptx (lista de slides com tipo,
-            titulo, subtitulo, texto, bullets, cor, itens, imagem).
+            titulo, subtitulo, texto, bullets, itens, imagem).
         :param ecossistema: sigla do ecossistema para a nomenclatura oficial (opcional).
         :param versao: numero de versao para o nome do arquivo (padrao 1).
         :param imagens: imagens ANEXADAS PELO USUARIO, na ordem dos marcadores.
@@ -1781,11 +1937,14 @@ class Tools:
             cole, sem reescrever, sem encurtar e sem remover a barra inicial da URL.
             Um caractere a menos quebra o download (o navegador resolve o caminho
             relativo a pagina do chat e devolve 404).
+        :param produto: de qual produto e a peca ('', 'institucional', 'casas vivas',
+            'nidum mundo', 'nidum prumo'). Define a UNICA cor de destaque e a logo.
+            Nos textos, 'nidum' e nomes de produto sempre em minusculas.
         """
         _ctx_entrega(__event_emitter__, __message_id__)
         try:
             return await self._apresentacao_html(
-                titulo, slides, __user__, ecossistema, versao, imagens
+                titulo, slides, __user__, ecossistema, versao, imagens, produto
             )
         except Exception:
             return _erro_limpo("gerar_apresentacao_html")
@@ -1796,7 +1955,7 @@ class Tools:
     # event loop do Open WebUI (um render grande congelava todos os usuarios).
     # ------------------------------------------------------------------
     async def _apresentacao_html(self, titulo, slides, __user__,
-                                 ecossistema="", versao=1, imagens=None):
+                                 ecossistema="", versao=1, imagens=None, produto=""):
         raw = slides
         slides = _itens_loose(slides, _texto_para_slide)
         if not slides:
@@ -1823,24 +1982,15 @@ class Tools:
                     _font_face("Ibrand.ttf", "100 900", "normal", "Ibrand"),
                 ]
             )
-            logo_t = _logo_b64("terracota")
-            logo_a = _logo_b64("areia")
-            mapa = {
-                "verde": "#515E52", "azul": "#4F7187", "terracota": "#9A4A2E",
-                "preto": "#1F1E1B", "creme": "#E5E0D5",
-            }
-            cores_secao = ["#515E52", "#4F7187", "#9A4A2E"]
-            cores_cartao = ["#4F7187", "#515E52", "#9A4A2E", "#1F1E1B"]
-            sec = [0]
+            # Brand Book v2: todo slide e branco e leva a logo na cor do produto; o
+            # acento (uma cor por peca) entra como --acento.
+            _chave, acento, cor_logo = _acento_da_peca(produto)
+            logo = _logo_b64(cor_logo)
 
             partes = []
             for s in slides:
                 tipo = _fold(s.get("tipo")) or "conteudo"
-                partes.append(
-                    _slide_html(
-                        s, tipo, mapa, cores_secao, cores_cartao, sec, logo_t, logo_a
-                    )
-                )
+                partes.append(_slide_html(s, tipo, logo))
                 # Imagem do usuario: slide PROPRIO logo apos, igual ao pptx (os layouts
                 # do deck sao composicoes fechadas; a foto em slide proprio aparece
                 # grande e nao briga com o texto). object-fit:contain = nunca distorce.
@@ -1854,10 +2004,9 @@ class Tools:
                             + (("<h2>" + leg + "</h2>") if leg else "")
                             + "<img src='" + uri + "' alt='' style='display:block;"
                             "margin:18px auto 0;max-width:88%;max-height:66vh;"
-                            "width:auto;height:auto;object-fit:contain;"
-                            "border-radius:12px'>"
-                            + (("<img class='logo' src='" + logo_t + "'>")
-                               if logo_t else "")
+                            "width:auto;height:auto;object-fit:contain'>"
+                            + (("<img class='logo' src='" + logo + "' alt='nidum'>")
+                               if logo else "")
                             + "</section>"
                         )
             deck = "".join(partes)
@@ -1875,8 +2024,9 @@ class Tools:
             html = (
                 "<!DOCTYPE html><html lang=\"pt-br\"><head><meta charset=\"utf-8\">"
                 "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
-                "<title>" + _esc(titulo or "Apresentacao Nidum") + "</title>"
-                "<style>" + faces + DECK_CSS + "</style></head><body>"
+                "<title>" + _esc(titulo or "apresentacao nidum") + "</title>"
+                "<style>" + faces + DECK_CSS + ":root{--acento:#" + acento + "}"
+                "</style></head><body>"
                 "<div class='deck'>" + deck + "</div>" + nav + DECK_JS + "</body></html>"
             )
             if com_editor:
@@ -1890,7 +2040,7 @@ class Tools:
         return "Arquivo gerado com sucesso. " + link
 
     async def _pptx(self, titulo, slides, marca, __user__,
-                    ecossistema="", versao=1, imagens=None):
+                    ecossistema="", versao=1, imagens=None, produto=""):
         raw_slides = slides
         slides = _itens_loose(slides, _texto_para_slide)
         if not slides:
@@ -1905,40 +2055,34 @@ class Tools:
             from pptx.util import Inches, Pt
             from pptx.dml.color import RGBColor
             from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
-            from pptx.enum.shapes import MSO_SHAPE
+            from pptx.enum.shapes import MSO_SHAPE, MSO_CONNECTOR
 
             def col(h):
                 return RGBColor(*_hex_to_rgb(h))
 
-            terracota = col(NIDUM_TERRACOTA)
-            verde = col(NIDUM_VERDE)
-            azul = col(NIDUM_AZUL)
-            cinza = col(NIDUM_CINZA)
+            # Brand Book v2 (2.9.0): slide BRANCO, texto escuro, estrutura por fios de
+            # 1pt e pontos. A UNICA cor de destaque e a do produto (acento) e aparece
+            # so em detalhes: o ponto do rotulo, o fio da secao, os numeros. Nada de
+            # fundo ou cartao de cor chapada, sombra ou canto arredondado. O campo
+            # 'cor' do slide deixou de ter efeito.
+            _chave, acento_hex, cor_logo = _acento_da_peca(produto)
+            acento = col(acento_hex)
+            pedra = col(NIDUM_CINZA)
             preto = col(NIDUM_PRETO)
-            creme = col(NIDUM_CREME)
             branco = col(NIDUM_BRANCO)
-            cores_secao = [verde, azul, terracota]
-            cores_cartao = [azul, verde, terracota, preto]
-            mapa_cor = {"verde": verde, "azul": azul, "terracota": terracota,
-                        "preto": preto, "creme": creme}
-            sec_idx = 0
 
             prs = Presentation()
             prs.slide_width = Inches(13.333)
             prs.slide_height = Inches(7.5)
             blank = prs.slide_layouts[6]
             SW = prs.slide_width
-            SH = prs.slide_height
 
-            def add_fundo(slide, cor):
-                shp = slide.shapes.add_shape(1, 0, 0, SW, SH)
-                shp.fill.solid()
-                shp.fill.fore_color.rgb = cor
-                shp.line.fill.background()
-                shp.shadow.inherit = False
-                slide.shapes._spTree.remove(shp._element)
-                slide.shapes._spTree.insert(2, shp._element)
-                return shp
+            def fundo_branco(slide):
+                # Fundo do PROPRIO slide (nao um retangulo por cima): quem edita o
+                # arquivo depois nao tropeca numa forma de fundo selecionavel.
+                fill = slide.background.fill
+                fill.solid()
+                fill.fore_color.rgb = branco
 
             def add_caixa(slide, left, top, width, height, anchor=None):
                 tb = slide.shapes.add_textbox(left, top, width, height)
@@ -1948,12 +2092,28 @@ class Tools:
                     tf.vertical_anchor = anchor
                 return tf
 
+            def _spc(run, centesimos):
+                # Espacamento entre letras em CENTESIMOS de ponto (atributo 'spc' do
+                # DrawingML). Negativo = condensado.
+                try:
+                    run.font._element.set("spc", str(int(centesimos)))
+                except Exception:
+                    log.exception("gerador_nidum: falha ao aplicar espacamento no pptx")
+
             def estilo(p, size, cor, bold=False, upper=False, italic=False, align=None):
                 if upper and p.text:
                     p.text = p.text.upper()
-                # Titulos (bold) usam a Ibrand (com peso proprio); corpo usa Maxima.
+                # Titulos (bold) usam a iBrand, com o espacamento FECHADO do Brand
+                # Book v2 (tamanho x fracao); corpo usa Maxima. Rotulo em maiusculas
+                # leva espacamento ABERTO e SemiBold.
                 fonte = NIDUM_FONT_LOGO if bold else NIDUM_FONT
-                negr = bold and fonte == NIDUM_FONT
+                negr = upper and not bold
+                if bold:
+                    spc = round(size * _tracking_ibrand(size) * 100)
+                elif upper:
+                    spc = round(size * 0.14 * 100)
+                else:
+                    spc = None
                 p.font.name = fonte
                 p.font.size = Pt(size)
                 p.font.bold = negr
@@ -1967,8 +2127,10 @@ class Tools:
                     r.font.bold = negr
                     r.font.italic = italic
                     r.font.color.rgb = cor
+                    if spc is not None:
+                        _spc(r, spc)
 
-            def add_logo(slide, cor_logo, left, top, width):
+            def add_logo(slide, left, top, width):
                 p = _logo_path(cor_logo)
                 if not p:
                     return
@@ -1977,38 +2139,49 @@ class Tools:
                 except Exception:
                     log.exception("gerador_nidum: falha ao inserir logo no pptx")
 
-            def add_bloco(slide, left, top, w, h, cor):
-                sh = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, w, h)
-                sh.fill.solid()
-                sh.fill.fore_color.rgb = cor
-                sh.line.fill.background()
-                sh.shadow.inherit = False
-                return sh
+            def add_fio(slide, x1, y1, x2, y2, cor):
+                # Fio de 1pt (Brand Book v2: a estrutura vem de linhas finas).
+                ln = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, x1, y1, x2, y2)
+                ln.line.color.rgb = cor
+                ln.line.width = Pt(1)
+                return ln
 
-            def add_card(slide, left, top, w, h, cor, titulo_c, texto_c):
-                card = slide.shapes.add_shape(
-                    MSO_SHAPE.ROUNDED_RECTANGLE, left, top, w, h
-                )
-                card.fill.solid()
-                card.fill.fore_color.rgb = cor
-                card.line.fill.background()
-                card.shadow.inherit = False
-                tf = card.text_frame
-                tf.word_wrap = True
-                tf.margin_left = Inches(0.22)
-                tf.margin_right = Inches(0.22)
-                tf.margin_top = Inches(0.18)
+            def add_ponto(slide, left, top, d=Inches(0.11)):
+                # Ponto chapado na cor do produto: marca rotulos, itens e etapas.
+                pt_ = slide.shapes.add_shape(MSO_SHAPE.OVAL, left, top, d, d)
+                pt_.fill.solid()
+                pt_.fill.fore_color.rgb = acento
+                pt_.line.fill.background()
+                pt_.shadow.inherit = False
+                return pt_
+
+            def rotulo(slide, tf, texto, y_ponto, x_ponto=Inches(1.0), size=12):
+                # Rotulo: maiusculas, espacado, escuro, com o ponto do produto antes.
+                # x_ponto = onde o TEXTO comeca (caixa + 0.1in de margem interna); o
+                # ponto fica pendurado a esquerda dele, alinhado a 1a linha.
+                pa = tf.paragraphs[0]
+                pa.text = texto
+                estilo(pa, size, preto, upper=True)
+                if marca:
+                    add_ponto(slide, x_ponto - Inches(0.26), y_ponto)
+                return tf.add_paragraph()
+
+            def add_card(slide, left, top, w, titulo_c, texto_c):
+                # Cartao v2: sem fundo. Abre com um fio escuro no topo e um ponto do
+                # produto antes do titulo.
+                if marca:
+                    add_fio(slide, left, top, left + w, top, preto)
+                    add_ponto(slide, left, top + Inches(0.3))
+                tf = add_caixa(slide, left + (Inches(0.24) if marca else 0),
+                               top + Inches(0.15), w - Inches(0.24), Inches(1.9))
                 p = tf.paragraphs[0]
                 p.text = titulo_c or ""
-                estilo(p, 15, creme, bold=True)
+                estilo(p, 18, preto, bold=True)
                 if texto_c:
                     p2 = tf.add_paragraph()
                     p2.text = texto_c
-                    estilo(p2, 11, creme)
-                return card
-
-            def cor_de(nome, padrao):
-                return mapa_cor.get(str(nome).lower(), padrao) if nome else padrao
+                    estilo(p2, 13, preto)
+                    p2.space_before = Pt(6)
 
             def add_slide_imagem(img, legenda):
                 # A imagem do usuario ganha o PROPRIO slide, logo apos o slide que a
@@ -2018,14 +2191,13 @@ class Tools:
                 # grande, centralizada, com margem, e o deck continua limpo.
                 sl = prs.slides.add_slide(blank)
                 if marca:
-                    add_fundo(sl, creme)
+                    fundo_branco(sl)
                 if legenda:
                     tfl = add_caixa(sl, Inches(0.9), Inches(0.45), Inches(11.5),
                                     Inches(0.8))
                     pl = tfl.paragraphs[0]
                     pl.text = str(legenda)
-                    estilo(pl, 18, verde if marca else preto, bold=True,
-                           align=PP_ALIGN.CENTER)
+                    estilo(pl, 18, preto, bold=True, align=PP_ALIGN.CENTER)
                 topo = Inches(1.35) if legenda else Inches(0.8)
                 caixa_w = SW - Inches(2.0)
                 caixa_h = Inches(6.3) - topo
@@ -2044,18 +2216,19 @@ class Tools:
                     )
                     return
                 if marca:
-                    add_logo(sl, "terracota", Inches(11.1), Inches(6.8), Inches(1.6))
+                    add_logo(sl, Inches(11.1), Inches(6.8), Inches(1.6))
 
             for s in slides:
                 tipo = _fold(s.get("tipo")) or "conteudo"
                 slide = prs.slides.add_slide(blank)
-                cor_titulo = verde if marca else preto
+                if marca:
+                    fundo_branco(slide)
+                cor_titulo = preto
                 cor_corpo = preto
 
                 if tipo == "capa":
                     if marca:
-                        add_fundo(slide, creme)
-                        add_logo(slide, "terracota", Inches(3.67), Inches(1.3), Inches(6.0))
+                        add_logo(slide, Inches(3.67), Inches(1.3), Inches(6.0))
                     tf = add_caixa(
                         slide, Inches(1.0), Inches(4.4), Inches(11.33), Inches(2.0),
                         MSO_ANCHOR.TOP,
@@ -2066,72 +2239,76 @@ class Tools:
                     if s.get("subtitulo"):
                         p2 = tf.add_paragraph()
                         p2.text = s["subtitulo"]
-                        estilo(p2, 18, terracota if marca else preto, align=PP_ALIGN.CENTER)
+                        estilo(p2, 18, preto, align=PP_ALIGN.CENTER)
+                        p2.space_before = Pt(10)
 
                 elif tipo == "secao":
-                    cor_sec = cores_secao[sec_idx % len(cores_secao)]
-                    sec_idx += 1
-                    cor_sec = cor_de(s.get("cor"), cor_sec)
+                    # Secao v2: fio curto na cor do produto, rotulo com ponto e titulo
+                    # grande. Branco, como todos. O fio vai ACIMA (posicao fixa): abaixo
+                    # dependeria de quantas linhas o titulo ocupa.
                     if marca:
-                        add_fundo(slide, cor_sec)
+                        add_fio(slide, Inches(1.1), Inches(2.3), Inches(2.0), Inches(2.3),
+                                acento)
                     tf = add_caixa(
-                        slide, Inches(1.0), Inches(2.6), Inches(11.33), Inches(2.3),
-                        MSO_ANCHOR.MIDDLE,
+                        slide, Inches(1.0), Inches(2.5), Inches(11.33), Inches(3.0),
+                        MSO_ANCHOR.TOP,
                     )
                     if s.get("subtitulo"):
-                        pa = tf.paragraphs[0]
-                        pa.text = s["subtitulo"]
-                        estilo(pa, 16, creme if marca else preto, upper=True)
-                        p = tf.add_paragraph()
+                        p = rotulo(slide, tf, s["subtitulo"], Inches(2.6),
+                                   x_ponto=Inches(1.1))
                     else:
                         p = tf.paragraphs[0]
                     p.text = s.get("titulo", "")
-                    estilo(p, 40, creme if marca else preto, bold=True)
+                    estilo(p, 40, preto, bold=True)
                     if marca:
-                        add_logo(slide, "areia", Inches(0.7), Inches(6.6), Inches(1.8))
+                        add_logo(slide, Inches(11.1), Inches(6.8), Inches(1.6))
 
                 elif tipo == "destaque":
-                    cor_d = cor_de(s.get("cor"), terracota)
+                    # Destaque v2: a frase em iBrand grande, aberta por um fio escuro a
+                    # esquerda. Sem fundo colorido.
                     if marca:
-                        add_fundo(slide, cor_d)
+                        add_fio(slide, Inches(1.2), Inches(2.2), Inches(1.2), Inches(5.3),
+                                preto)
                     tf = add_caixa(
-                        slide, Inches(1.2), Inches(2.2), Inches(10.9), Inches(3.1),
+                        slide, Inches(1.6), Inches(2.2), Inches(10.5), Inches(3.1),
                         MSO_ANCHOR.MIDDLE,
                     )
                     if s.get("subtitulo"):
                         pa = tf.paragraphs[0]
                         pa.text = s["subtitulo"]
-                        estilo(pa, 16, creme if marca else preto, upper=True)
+                        estilo(pa, 12, preto, upper=True)
                         p = tf.add_paragraph()
                     else:
                         p = tf.paragraphs[0]
                     p.text = s.get("titulo", "")
-                    estilo(p, 34, creme if marca else preto, bold=True)
+                    estilo(p, 34, preto, bold=True)
                     if s.get("texto"):
                         p2 = tf.add_paragraph()
                         p2.text = s["texto"]
-                        estilo(p2, 16, creme if marca else preto)
+                        estilo(p2, 16, preto)
+                        p2.space_before = Pt(12)
                     if marca:
-                        add_logo(slide, "areia", Inches(11.0), Inches(6.8), Inches(1.6))
+                        add_logo(slide, Inches(11.1), Inches(6.8), Inches(1.6))
 
                 elif tipo == "divisao":
-                    cor_b = cor_de(s.get("cor"), verde)
+                    # Divisao v2: duas colunas brancas; o fio ESCURO abre a da direita.
                     if marca:
-                        add_fundo(slide, creme)
-                        add_bloco(slide, 0, 0, Inches(5.4), SH, cor_b)
+                        add_fio(slide, Inches(5.4), Inches(0.9), Inches(5.4), Inches(6.5),
+                                preto)
                     tf_l = add_caixa(
-                        slide, Inches(0.7), Inches(0.9), Inches(4.2), Inches(5.6),
+                        slide, Inches(0.9), Inches(0.9), Inches(4.1), Inches(5.6),
                         MSO_ANCHOR.MIDDLE,
                     )
                     pl = tf_l.paragraphs[0]
                     pl.text = s.get("titulo", "")
-                    estilo(pl, 28, creme if marca else preto, bold=True)
-                    tf_r = add_caixa(slide, Inches(5.9), Inches(0.9), Inches(6.7), Inches(5.6))
+                    estilo(pl, 28, preto, bold=True)
+                    tf_r = add_caixa(slide, Inches(5.9), Inches(0.9), Inches(6.7), Inches(5.6),
+                                     MSO_ANCHOR.MIDDLE)
                     first = True
                     if s.get("subtitulo"):
                         pa = tf_r.paragraphs[0]
                         pa.text = s["subtitulo"]
-                        estilo(pa, 13, preto, upper=True)
+                        estilo(pa, 12, preto, upper=True)
                         first = False
                     if s.get("texto"):
                         p = tf_r.paragraphs[0] if first else tf_r.add_paragraph()
@@ -2145,18 +2322,13 @@ class Tools:
                         estilo(p, 15, preto)
 
                 elif tipo == "numerada":
-                    if marca:
-                        add_fundo(slide, creme)
                     tf_t = add_caixa(slide, Inches(0.9), Inches(0.7), Inches(11.5), Inches(1.3))
                     if s.get("subtitulo"):
-                        pa = tf_t.paragraphs[0]
-                        pa.text = s["subtitulo"]
-                        estilo(pa, 14, preto, upper=True)
-                        pt = tf_t.add_paragraph()
+                        pt = rotulo(slide, tf_t, s["subtitulo"], Inches(0.82))
                     else:
                         pt = tf_t.paragraphs[0]
                     pt.text = s.get("titulo", "")
-                    estilo(pt, 28, verde if marca else preto, bold=True)
+                    estilo(pt, 28, preto, bold=True)
                     itens = _lista_de_dicts(s.get("itens"))
                     norm = []
                     for it in itens:
@@ -2166,69 +2338,81 @@ class Tools:
                         )
                     if not norm:
                         norm = [("", str(b)) for b in _lista(s.get("bullets"))]
+                    n_itens = min(len(norm), 6)
                     for idx, (t_i, txt_i) in enumerate(norm[:6]):
                         y = Inches(2.0 + idx * 0.82)
-                        tfn = add_caixa(slide, Inches(0.9), y, Inches(0.9), Inches(0.8))
+                        tfn = add_caixa(slide, Inches(0.9), y, Inches(0.9), Inches(0.8),
+                                        MSO_ANCHOR.MIDDLE)
                         pn = tfn.paragraphs[0]
                         pn.text = str(idx + 1)
-                        estilo(pn, 30, terracota, bold=True)
+                        # Numero: detalhe na cor do produto, iBrand -2% (Brand Book v2).
+                        estilo(pn, 30, acento if marca else preto, bold=True)
+                        for r in pn.runs:
+                            _spc(r, round(30 * -0.02 * 100))
                         tfx = add_caixa(slide, Inches(1.9), y, Inches(10.5), Inches(0.8),
                                         MSO_ANCHOR.MIDDLE)
                         px = tfx.paragraphs[0]
-                        px.text = (t_i + " - " + txt_i).strip(" -") if t_i else txt_i
+                        # Sem travessao (Brand Book v2): titulo e texto separados por
+                        # dois-pontos, com o titulo em SemiBold.
+                        px.text = (t_i + ": " + txt_i) if (t_i and txt_i) else (t_i or txt_i)
                         estilo(px, 15, preto)
+                        if t_i and txt_i and px.runs:
+                            r0 = px.runs[0]
+                            r0.text = t_i + ": "
+                            r1 = px.add_run()
+                            r1.text = txt_i
+                            r1.font.name = NIDUM_FONT
+                            r1.font.size = Pt(15)
+                            r1.font.color.rgb = preto
+                            r0.font.bold = True
+                        if marca and idx < n_itens - 1:
+                            add_fio(slide, Inches(1.9), y + Inches(0.8),
+                                    Inches(12.4), y + Inches(0.8), pedra)
 
                 elif tipo == "cartoes":
-                    if marca:
-                        add_fundo(slide, creme)
                     tf_t = add_caixa(slide, Inches(0.9), Inches(0.55), Inches(11.5), Inches(1.1))
                     if s.get("subtitulo"):
-                        pa = tf_t.paragraphs[0]
-                        pa.text = s["subtitulo"]
-                        estilo(pa, 14, preto, upper=True)
-                        pt = tf_t.add_paragraph()
+                        pt = rotulo(slide, tf_t, s["subtitulo"], Inches(0.67))
                     else:
                         pt = tf_t.paragraphs[0]
                     pt.text = s.get("titulo", "")
-                    estilo(pt, 26, verde if marca else preto, bold=True)
+                    estilo(pt, 26, preto, bold=True)
                     itens = _lista_de_dicts(s.get("itens"))
                     if not itens:
                         itens = [{"titulo": "", "texto": str(b)} for b in _lista(s.get("bullets"))]
                     itens = itens[:4]
-                    xs = [Inches(0.9), Inches(6.85)]
-                    ys = [Inches(1.9), Inches(4.35)]
+                    xs = [Inches(1.0), Inches(6.95)]
+                    ys = [Inches(2.1), Inches(4.45)]
                     for idx, it in enumerate(itens):
                         add_card(
-                            slide, xs[idx % 2], ys[idx // 2], Inches(5.6), Inches(2.2),
-                            cores_cartao[idx % len(cores_cartao)],
+                            slide, xs[idx % 2], ys[idx // 2], Inches(5.4),
                             it.get("titulo") or "", it.get("texto") or "",
                         )
+                    if marca:
+                        add_logo(slide, Inches(11.1), Inches(6.8), Inches(1.6))
 
                 elif tipo == "encerramento":
                     if marca:
-                        add_fundo(slide, creme)
-                        add_logo(slide, "terracota", Inches(4.67), Inches(2.4), Inches(4.0))
+                        add_logo(slide, Inches(4.67), Inches(2.0), Inches(4.0))
                     tf = add_caixa(
-                        slide, Inches(1.0), Inches(4.6), Inches(11.33), Inches(1.2),
+                        slide, Inches(1.0), Inches(4.4), Inches(11.33), Inches(1.6),
                         MSO_ANCHOR.TOP,
                     )
                     p = tf.paragraphs[0]
-                    p.text = s.get("titulo") or "Fazer da casa um ninho."
-                    estilo(p, 22, cor_titulo, align=PP_ALIGN.CENTER)
+                    # Sem titulo, fecha com o slogan v2. "Fazer da casa um ninho." virou o
+                    # PROPOSITO e deixou de assinar peca.
+                    p.text = s.get("titulo") or NIDUM_SLOGAN
+                    estilo(p, 24, cor_titulo, bold=True, align=PP_ALIGN.CENTER)
                     if s.get("texto"):
                         p2 = tf.add_paragraph()
                         p2.text = s["texto"]
                         estilo(p2, 14, preto, align=PP_ALIGN.CENTER)
+                        p2.space_before = Pt(10)
 
                 else:
-                    if marca:
-                        add_fundo(slide, creme)
                     tf_t = add_caixa(slide, Inches(0.9), Inches(0.7), Inches(11.5), Inches(1.4))
                     if s.get("subtitulo"):
-                        pa = tf_t.paragraphs[0]
-                        pa.text = s["subtitulo"]
-                        estilo(pa, 14, preto, upper=True)
-                        pt = tf_t.add_paragraph()
+                        pt = rotulo(slide, tf_t, s["subtitulo"], Inches(0.82))
                     else:
                         pt = tf_t.paragraphs[0]
                     pt.text = s.get("titulo", "")
@@ -2246,8 +2430,9 @@ class Tools:
                         first = False
                         p.text = str(b)
                         estilo(p, 16, cor_corpo)
+                        p.space_before = Pt(6)
                     if marca:
-                        add_logo(slide, "terracota", Inches(11.1), Inches(6.8), Inches(1.6))
+                        add_logo(slide, Inches(11.1), Inches(6.8), Inches(1.6))
 
                 # Imagem que o usuario anexou e o modelo posicionou NESTE slide.
                 img_s = _imagem_do_item(imgs, s)
@@ -2265,7 +2450,7 @@ class Tools:
         return "Arquivo gerado com sucesso. " + link
 
     async def _xlsx(self, titulo, planilhas, marca, __user__,
-                    ecossistema="", versao=1):
+                    ecossistema="", versao=1, produto=""):
         raw_planilhas = planilhas
         planilhas = _lista_de_dicts(planilhas)
         if not planilhas:
@@ -2273,26 +2458,30 @@ class Tools:
 
         def _montar():
             from openpyxl import Workbook
-            from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+            from openpyxl.styles import Font, Alignment, Border, Side
             from openpyxl.utils import get_column_letter
 
             wb = Workbook()
             wb.remove(wb.active)
 
-            f_titulo = Font(name=NIDUM_FONT_LOGO, size=18, bold=False, color=NIDUM_VERDE)
-            f_header = Font(name=NIDUM_FONT, size=11, bold=True, color=NIDUM_CREME)
+            # Brand Book v2 (2.9.0): sem cabecalho de cor chapada e sem zebra. O
+            # cabecalho e escuro em SemiBold sobre branco, fechado por um fio escuro;
+            # as linhas se separam por fio pedra. A cor do produto fica so na aba.
+            _chave, acento, _logo = _acento_da_peca(produto)
+            f_titulo = Font(name=NIDUM_FONT_LOGO, size=18, bold=False, color=NIDUM_PRETO)
+            f_header = Font(name=NIDUM_FONT, size=11, bold=True, color=NIDUM_PRETO)
             f_body = Font(name=NIDUM_FONT, size=11, color=NIDUM_PRETO)
-            fill_header = PatternFill("solid", fgColor=NIDUM_VERDE)
-            fill_alt = PatternFill("solid", fgColor=NIDUM_CREME_ALT)
             linha_side = Side(style="thin", color=NIDUM_CINZA)
             borda_b = Border(bottom=linha_side)
+            borda_h = Border(bottom=Side(style="thin", color=NIDUM_PRETO))
             al_h = Alignment(horizontal="left", vertical="center")
             al_b = Alignment(horizontal="left", vertical="center", wrap_text=True)
 
             for pl in planilhas:
                 ws = wb.create_sheet(title=(pl.get("nome") or "Planilha")[:31])
                 if marca:
-                    ws.sheet_properties.tabColor = NIDUM_VERDE
+                    ws.sheet_properties.tabColor = acento
+                    ws.sheet_view.showGridLines = False
                 cabec = _lista(pl.get("cabecalhos"))
                 linhas = [_lista(r) for r in _lista(pl.get("linhas"))]
                 ncols = max([len(cabec)] + [len(r) for r in linhas] + [1])
@@ -2315,12 +2504,11 @@ class Tools:
                         cell = ws.cell(row=r, column=j, value=val)
                         cell.alignment = al_h
                         if marca:
-                            cell.fill = fill_header
                             cell.font = f_header
+                            cell.border = borda_h
                     ws.row_dimensions[r].height = 22
                     r += 1
 
-                data_ini = r
                 for ld in linhas:
                     for j in range(1, ncols + 1):
                         val = ld[j - 1] if j - 1 < len(ld) else None
@@ -2328,8 +2516,6 @@ class Tools:
                         cell.font = f_body
                         cell.alignment = al_b
                         cell.border = borda_b
-                        if marca and ((r - data_ini) % 2 == 1):
-                            cell.fill = fill_alt
                     r += 1
 
                 for j in range(1, ncols + 1):
@@ -2355,7 +2541,7 @@ class Tools:
         return "Arquivo gerado com sucesso. " + link
 
     async def _docx(self, titulo, secoes, marca, __user__,
-                    ecossistema="", versao=1, imagens=None):
+                    ecossistema="", versao=1, imagens=None, produto=""):
         raw_secoes = secoes
         secoes = _itens_loose(secoes, _texto_para_secao)
         if not secoes:
@@ -2367,15 +2553,58 @@ class Tools:
             from docx.shared import Pt, RGBColor, Inches
             from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-            verde = RGBColor(*_hex_to_rgb(NIDUM_VERDE))
-            terracota = RGBColor(*_hex_to_rgb(NIDUM_TERRACOTA))
-            cinza = RGBColor(*_hex_to_rgb(NIDUM_CINZA))
+            from docx.oxml import OxmlElement
+            from docx.oxml.ns import qn
+
             ink = RGBColor(*_hex_to_rgb(NIDUM_PRETO))
+            # Brand Book v2 (2.9.0): titulos ESCUROS em iBrand com espacamento
+            # fechado; a cor do produto fica so na logo. Pagina branca.
+            _chave, _acento, cor_logo = _acento_da_peca(produto)
+
+            def _condensar(rpr, size_pt):
+                # Espacamento entre letras da iBrand (Brand Book v2): w:spacing em
+                # VIGESIMOS de ponto, negativo = condensado. Ex.: 30pt x 2.2% = 0.66pt
+                # = -13. Substitui um w:spacing anterior, se houver.
+                # ORDEM IMPORTA: o schema do Word fixa a sequencia dos filhos de
+                # w:rPr, e o Word acusa "conteudo ilegivel" se w:spacing vier depois
+                # de w:sz. Entra antes do primeiro sucessor que existir.
+                try:
+                    val = int(round(size_pt * _tracking_ibrand(size_pt) * 20))
+                    for velho in rpr.findall(qn("w:spacing")):
+                        rpr.remove(velho)
+                    sp = OxmlElement("w:spacing")
+                    sp.set(qn("w:val"), str(val))
+                    sucessores = ("w:w", "w:kern", "w:position", "w:sz", "w:szCs",
+                                  "w:highlight", "w:u", "w:effect", "w:bdr", "w:shd",
+                                  "w:fitText", "w:vertAlign", "w:rtl", "w:cs", "w:em",
+                                  "w:lang", "w:eastAsianLayout", "w:specVanish",
+                                  "w:oMath")
+                    alvo = None
+                    for filho in rpr:
+                        if filho.tag in [qn(t) for t in sucessores]:
+                            alvo = filho
+                            break
+                    if alvo is not None:
+                        alvo.addprevious(sp)
+                    else:
+                        rpr.append(sp)
+                except Exception:
+                    log.exception("gerador_nidum: falha ao condensar titulo no docx")
+
+            def _sem_borda(st):
+                # O estilo "Title" do modelo padrao do Word traz um FIO AZUL embaixo
+                # (cor de tema, fora da paleta). Tira a borda do paragrafo.
+                try:
+                    ppr = st.element.get_or_add_pPr()
+                    for b in ppr.findall(qn("w:pBdr")):
+                        ppr.remove(b)
+                except Exception:
+                    log.exception("gerador_nidum: falha ao limpar borda do titulo docx")
 
             doc = Document()
 
             # Logo de marca (regra 2.4.0: abertura E encerramento). Pagina branca ->
-            # logo terracota. Centralizado, nunca em toda pagina - so topo e fim.
+            # logo na cor do produto (escuro no padrao). So topo e fim.
             def _logo_par(cor):
                 lp = _logo_path(cor)
                 if not lp:
@@ -2396,18 +2625,22 @@ class Tools:
                     pf = normal.paragraph_format
                     pf.line_spacing = 1.32
                     pf.space_after = Pt(8)
-                    for lvl, cor, sz in (
-                        ("Title", verde, 30),
-                        ("Heading 1", verde, 17),
-                        ("Heading 2", terracota, 13),
+                    for lvl, sz in (
+                        ("Title", 30),
+                        ("Heading 1", 18),
+                        ("Heading 2", 14),
                     ):
                         try:
                             st = doc.styles[lvl]
                             st.font.name = NIDUM_FONT_LOGO
-                            st.font.color.rgb = cor
+                            st.font.color.rgb = ink
                             st.font.size = Pt(sz)
+                            st.font.bold = False
+                            st.font.italic = False
+                            _condensar(st.element.get_or_add_rPr(), sz)
+                            _sem_borda(st)
                         except Exception:
-                            pass
+                            log.exception("gerador_nidum: falha no estilo %s do docx", lvl)
                 except Exception:
                     log.exception("gerador_nidum: falha ao aplicar estilos docx")
 
@@ -2432,13 +2665,13 @@ class Tools:
                     )
 
             if marca:
-                _logo_par("terracota")   # logo de ABERTURA (topo)
+                _logo_par(cor_logo)   # logo de ABERTURA (topo)
 
             h = doc.add_heading(titulo or "Documento", level=0)
             for run in h.runs:
                 run.font.name = NIDUM_FONT_LOGO
                 if marca:
-                    run.font.color.rgb = verde
+                    run.font.color.rgb = ink
 
             for sec in secoes:
                 if sec.get("heading"):
@@ -2446,7 +2679,7 @@ class Tools:
                     for run in hs.runs:
                         run.font.name = NIDUM_FONT_LOGO
                         if marca:
-                            run.font.color.rgb = verde
+                            run.font.color.rgb = ink
                 for par in _lista(sec.get("paragrafos")):
                     p = doc.add_paragraph(str(par))
                     for run in p.runs:
@@ -2463,12 +2696,12 @@ class Tools:
                     _imagem_par(img_s)
 
             if marca:
-                _logo_par("terracota")   # logo de ENCERRAMENTO (fim)
+                _logo_par(cor_logo)   # logo de ENCERRAMENTO (fim)
 
             if marca:
                 try:
                     fp = doc.sections[0].footer.paragraphs[0]
-                    fr = fp.add_run("nidum. fazer da casa um ninho.")
+                    fr = fp.add_run(NIDUM_SLOGAN)
                     fr.font.name = NIDUM_FONT
                     fr.font.size = Pt(8)
                     fr.font.color.rgb = ink
@@ -2487,7 +2720,7 @@ class Tools:
         return "Arquivo gerado com sucesso. " + link
 
     async def _pdf(self, titulo, secoes, marca, __user__,
-                   ecossistema="", versao=1, imagens=None):
+                   ecossistema="", versao=1, imagens=None, produto=""):
         raw_secoes = secoes
         secoes = _itens_loose(secoes, _texto_para_secao)
         if not secoes:
@@ -2509,17 +2742,17 @@ class Tools:
                 ListItem,
                 Image,
                 HRFlowable,
+                Indenter,
             )
             from reportlab.pdfbase import pdfmetrics
             from reportlab.pdfbase.ttfonts import TTFont
 
-            verde = colors.HexColor("#" + NIDUM_VERDE)
-            terracota = colors.HexColor("#" + NIDUM_TERRACOTA)
+            # Brand Book v2 (2.9.0): pagina BRANCA (o PDF nao pinta mais fundo),
+            # titulos escuros, fios de 1px, tabela sem cabecalho chapado e sem zebra.
+            # A cor do produto entra na logo e no fio curto abaixo do titulo.
+            _chave, acento_hex, cor_logo = _acento_da_peca(produto)
+            acento = colors.HexColor("#" + acento_hex)
             preto = colors.HexColor("#" + NIDUM_PRETO)
-            creme = colors.HexColor("#" + NIDUM_CREME)
-            cremealt = colors.HexColor("#" + NIDUM_CREME_ALT)
-            cinza = colors.HexColor("#" + NIDUM_CINZA)
-            branco = colors.HexColor("#" + NIDUM_BRANCO)
             ink = preto
             linha_cor = colors.HexColor("#" + NIDUM_CINZA)
 
@@ -2556,15 +2789,19 @@ class Tools:
                 FONT, FONT_B, FONT_TITULO = "Helvetica", "Helvetica-Bold", "Helvetica-Bold"
 
             styles = getSampleStyleSheet()
+            # Titulo alinhado a esquerda (o Title do reportlab centraliza) - a logo e o
+            # fio tambem estao a esquerda. LIMITE CONHECIDO: o ParagraphStyle do
+            # reportlab nao tem espacamento entre letras, entao o PDF fica SEM o
+            # condensado da iBrand que HTML, PPTX e DOCX ja aplicam.
             st_titulo = ParagraphStyle(
                 "NidumTitulo", parent=styles["Title"],
-                textColor=verde if marca else ink, fontName=FONT_TITULO,
-                fontSize=25, leading=29,
+                textColor=ink, fontName=FONT_TITULO,
+                fontSize=26, leading=29, alignment=0,
             )
             st_head = ParagraphStyle(
                 "NidumHead", parent=styles["Heading1"],
-                textColor=verde if marca else ink, fontName=FONT_TITULO,
-                fontSize=15, leading=19,
+                textColor=ink, fontName=FONT_TITULO,
+                fontSize=16, leading=19,
             )
             st_body = ParagraphStyle(
                 "NidumBody",
@@ -2589,14 +2826,14 @@ class Tools:
                 if not marca:
                     return
                 canvas.saveState()
-                canvas.setFillColor(creme)
-                canvas.rect(0, 0, doc.pagesize[0], doc.pagesize[1], fill=1, stroke=0)
-                # rodape: assinatura + numero de pagina
+                # Pagina branca (Brand Book v2) - nao pinta mais fundo areia.
+                # Rodape: fio pedra de 1px, slogan e numero de pagina.
+                canvas.setStrokeColor(linha_cor)
+                canvas.setLineWidth(0.75)
+                canvas.line(22 * mm, 15 * mm, doc.pagesize[0] - 22 * mm, 15 * mm)
                 canvas.setFillColor(preto)
                 canvas.setFont(FONT, 8)
-                canvas.drawString(
-                    22 * mm, 11 * mm, "nidum. fazer da casa um ninho."
-                )
+                canvas.drawString(22 * mm, 11 * mm, NIDUM_SLOGAN)
                 canvas.drawRightString(
                     doc.pagesize[0] - 22 * mm, 11 * mm, str(doc.page)
                 )
@@ -2604,22 +2841,28 @@ class Tools:
 
             flow = []
             if marca:
-                lp = _logo_path("terracota")
+                lp = _logo_path(cor_logo)
                 if lp:
                     try:
+                        # O PNG tem margem transparente: o desenho ocupa ~59% da
+                        # largura. 56mm de imagem = ~33mm de logo (minimo v2: 15mm).
+                        # O Indenter negativo desconta a margem esquerda (393/1920 da
+                        # largura = 11.5mm) para o "n" alinhar com o titulo.
+                        flow.append(Indenter(left=-11.5 * mm))
                         flow.append(
-                            Image(lp, width=40 * mm, height=22.5 * mm, hAlign="LEFT")
+                            Image(lp, width=56 * mm, height=31.5 * mm, hAlign="LEFT")
                         )
-                        flow.append(Spacer(1, 2 * mm))
+                        flow.append(Indenter(left=11.5 * mm))
                     except Exception:
                         log.exception("gerador_nidum: falha ao inserir logo no pdf")
             flow.append(Paragraph(titulo or "Documento", st_titulo))
-            flow.append(Spacer(1, 2 * mm))
+            flow.append(Spacer(1, 3 * mm))
             if marca:
+                # Fio curto de 1px na cor do produto: o unico acento da pagina.
                 flow.append(
                     HRFlowable(
-                        width="100%", thickness=1.5, color=terracota,
-                        spaceBefore=1, spaceAfter=7 * mm, lineCap="round",
+                        width=18 * mm, thickness=0.75, color=acento, hAlign="LEFT",
+                        spaceBefore=1, spaceAfter=8 * mm, lineCap="butt",
                     )
                 )
             else:
@@ -2674,28 +2917,27 @@ class Tools:
                         ("LINEBELOW", (0, 1), (-1, -1), 0.4, linha_cor),
                     ]
                     if marca:
-                        estilo_t.append(("BACKGROUND", (0, 0), (-1, 0), verde))
-                        estilo_t.append(("TEXTCOLOR", (0, 0), (-1, 0), creme))
+                        # Cabecalho v2: escuro em negrito, fechado por fio escuro.
+                        # Sem fundo chapado e sem zebra.
+                        estilo_t.append(("TEXTCOLOR", (0, 0), (-1, 0), ink))
                         estilo_t.append(("FONTNAME", (0, 0), (-1, 0), FONT_B))
                         estilo_t.append(("FONTNAME", (0, 1), (-1, -1), FONT))
-                        estilo_t.append(("TOPPADDING", (0, 0), (-1, 0), 9))
-                        estilo_t.append(("BOTTOMPADDING", (0, 0), (-1, 0), 9))
-                        estilo_t.append(
-                            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [branco, cremealt])
-                        )
+                        estilo_t.append(("LINEBELOW", (0, 0), (-1, 0), 0.75, ink))
+                        estilo_t.append(("LEFTPADDING", (0, 0), (0, -1), 0))
                     t.setStyle(TableStyle(estilo_t))
                     flow.append(t)
                     flow.append(Spacer(1, 4 * mm))
 
             # Logo de ENCERRAMENTO (regra 2.4.0: abertura E fim). O topo ja tem logo (acima);
-            # aqui fecha o documento. Centralizado, menor, terracota (pagina areia).
+            # aqui fecha o documento. Centralizado, na cor do produto (pagina branca).
+            # 40mm de imagem = ~24mm de logo (o PNG tem margem transparente).
             if marca:
-                lp_fim = _logo_path("terracota")
+                lp_fim = _logo_path(cor_logo)
                 if lp_fim:
                     try:
                         flow.append(Spacer(1, 8 * mm))
                         flow.append(
-                            Image(lp_fim, width=32 * mm, height=18 * mm, hAlign="CENTER")
+                            Image(lp_fim, width=40 * mm, height=22.5 * mm, hAlign="CENTER")
                         )
                     except Exception:
                         log.exception("gerador_nidum: falha ao inserir logo de fim no pdf")
