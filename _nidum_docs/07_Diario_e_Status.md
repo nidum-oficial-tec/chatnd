@@ -13,14 +13,14 @@
 
 ---
 
-## 2026-11-12 — Gerador de arquivos no Brand Book v2 (tool 2.9.0, aguardando publish)
+## 2026-11-12 — Gerador de arquivos no Brand Book v2 (tool 2.9.0, no ar)
 
 - **Gatilho:** o Brand Book nidum v2 (novembro) saiu, e o gerador ainda seguia o v1 (julho). Base usada: `MKT_ManualBrandbook_12-11-2026_v2.md` (OneDrive, Marca - Design System).
 - **O que muda nos arquivos:** fundo branco; nenhum bloco de cor chapada (slides, cartões, cabeçalho de tabela, zebra); fios de 1px e pontos; títulos escuros em iBrand com espaçamento fechado; sem sombra nem transparência; slogan "Do imóvel que existe ao ninho." no lugar de "fazer da casa um ninho."; logo no tamanho mínimo do v2.
 - **Uma cor por peça, pelo produto:** parâmetro novo `produto` (`''`, `institucional`, `casas vivas`, `nidum mundo`, `nidum prumo`). O campo `cor` do slide deixou de ter efeito.
 - **Validação:** suíte nova `teste_marca_v2.py` (lê os arquivos gerados) e as cinco suítes antigas, todas OK. Amostras dos seis formatos geradas e conferidas na tela (PPTX pelo PowerPoint, DOCX pelo Word, deck/HTML no navegador, PDF rasterizado).
 - **Ficou de fora, de propósito:** rótulo e subtítulo saem escuros, não "cinza" (pedra como texto reprova o contraste AA que o próprio v2 exige); os PNG de logo não foram recortados (é asset de backend); o PDF fica sem o espaçamento fechado da iBrand (o reportlab não tem esse ajuste).
-- **Estado:** na branch `tool/brandbook-v2`, sem commit. Publicar a tool exige republicar o pipe junto (reseta o cache).
+- **Estado:** mergeado no PR #136 e **publicado em 12/11** pelo workflow, a partir da `main` (`17b2f72f4559`): tool 2.9.0 e pipe 1.67.3 republicado (reseta o cache). Simulação depois do publish: painel = repositório. Falta ver um arquivo gerado no chat com conta comum.
 
 ---
 
