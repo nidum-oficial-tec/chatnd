@@ -4941,7 +4941,7 @@ async def streaming_chat_response_handler(response, ctx):
                         #
                         # Antes, ao bater no teto o laco parava e a tela mostrava so
                         # "Tool-call limit reached" - todo o material reunido no turno
-                        # era jogado fora sem resposta (caso da Rachel, 16/11: 33
+                        # era jogado fora sem resposta (caso de 16/11: 33
                         # chamadas, ~228 mil chars lidos, zero texto entregue).
                         # Agora a chamada que fecha o teto vai SEM ferramentas e com
                         # a ordem de responder com o que ja tem. Se o provedor

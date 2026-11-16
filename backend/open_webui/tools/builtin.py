@@ -66,8 +66,8 @@ async def _has_read_access_to_file(
 
     # Era UserModel(**{'id': ..., 'role': ...}): o modelo exige email, nome e
     # datas, entao para todo nao-admin lendo arquivo de colecao isto estourava
-    # ValidationError e a ferramenta devolvia erro (log de 16/11/2026, conversa
-    # da Rachel). Carrega o usuario real; sem usuario, nega.
+    # ValidationError e a ferramenta devolvia erro (log de 16/11/2026).
+    # Carrega o usuario real; sem usuario, nega.
     user = await Users.get_user_by_id(user_id)
     if not user:
         return False
