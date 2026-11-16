@@ -61,12 +61,20 @@ async def _has_read_access_to_file(
         return True
     if model_knowledge and any(item.get('type') == 'file' and item.get('id') == file.id for item in model_knowledge):
         return True
+    from open_webui.models.users import Users
     from open_webui.utils.access_control.files import has_access_to_file
 
+    # Era UserModel(**{'id': ..., 'role': ...}): o modelo exige email, nome e
+    # datas, entao para todo nao-admin lendo arquivo de colecao isto estourava
+    # ValidationError e a ferramenta devolvia erro (log de 16/11/2026).
+    # Carrega o usuario real; sem usuario, nega.
+    user = await Users.get_user_by_id(user_id)
+    if not user:
+        return False
     return await has_access_to_file(
         file_id=file.id,
         access_type='read',
-        user=UserModel(**{'id': user_id, 'role': user_role}),
+        user=user,
     )
 
 

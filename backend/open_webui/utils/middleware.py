@@ -4937,6 +4937,41 @@ async def streaming_chat_response_handler(response, ctx):
                                     }
                                 )
 
+                        # ULTIMA RODADA: RESPONDER, NAO BUSCAR (16/11/2026).
+                        #
+                        # Antes, ao bater no teto o laco parava e a tela mostrava so
+                        # "Tool-call limit reached" - todo o material reunido no turno
+                        # era jogado fora sem resposta (caso de 16/11: 33
+                        # chamadas, ~228 mil chars lidos, zero texto entregue).
+                        # Agora a chamada que fecha o teto vai SEM ferramentas e com
+                        # a ordem de responder com o que ja tem. Se o provedor
+                        # ignorar o tool_choice e pedir ferramenta mesmo assim, o
+                        # aviso de teto abaixo continua aparecendo como antes.
+                        if (
+                            CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS is not None
+                            and tool_call_iterations >= CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS
+                        ):
+                            log.info(
+                                'Tool-call limit (%s): final call without tools',
+                                CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS,
+                            )
+                            if new_form_data.get('tools'):
+                                new_form_data['tool_choice'] = 'none'
+                            new_form_data['messages'] = [
+                                *new_form_data['messages'],
+                                {
+                                    'role': 'user',
+                                    'content': (
+                                        '[AVISO DO SISTEMA: o limite de consultas desta resposta '
+                                        'foi atingido. NAO chame mais ferramentas. Responda AGORA, '
+                                        'em portugues, com base apenas no material ja reunido acima. '
+                                        'Ao final, diga com clareza o que nao foi possivel verificar '
+                                        'e sugira como o usuario pode dividir o pedido para completar '
+                                        'a analise.]'
+                                    ),
+                                },
+                            ]
+
                         res = await generate_chat_completion(
                             request,
                             new_form_data,
